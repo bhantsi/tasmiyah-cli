@@ -85,17 +85,16 @@ tasmiyah
 - [x] Step 4: ANSI colors (gold/green theme)
 - [x] Step 5: CLI flags (`clap`)
 - [x] Step 6: Transliteration + English translation
-- [ ] Step 7: Random Islamic phrases mode ← **next**
-- [ ] Step 7: Random Islamic phrases mode
-- [ ] Step 8: Cross-platform testing
+- [x] Step 7: Random Islamic phrases mode
+- [ ] Step 8: Cross-platform testing ← **next**
 - [ ] Step 9: GitHub Actions release pipeline
 - [ ] Step 10: Publish to crates.io + Homebrew
 
 ## 🛠️ Build from source
 
 ```bash
-git clone https://github.com/bhantsi/tasmiyah-cli-.git
-cd tasmiyah-cli-
+git clone https://github.com/bhantsi/tasmiyah-cli.git
+cd tasmiyah-cli
 cargo build --release
 ./target/release/tasmiyah
 ```

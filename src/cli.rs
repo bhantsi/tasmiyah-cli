@@ -17,7 +17,7 @@ pub struct Args {
     #[arg(short = 't', long)]
     pub translation: bool,
 
-    /// Print a random Islamic phrase (coming in a future release).
+    /// Print a random Islamic phrase (Alhamdulillah, SubhanAllah, ...).
     #[arg(short = 'r', long)]
     pub random: bool,
 }

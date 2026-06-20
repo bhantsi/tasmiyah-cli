@@ -13,12 +13,8 @@ use crossterm::terminal;
 use unicode_width::UnicodeWidthStr;
 
 use crate::cli::Args;
+use crate::phrases::Phrase;
 use crate::theme::Theme;
-
-// Basmala — "In the name of Allah, the Most Gracious, the Most Merciful".
-const BISMILLAH_AR: &str = "بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
-const BISMILLAH_TRANSLIT: &str = "Bismillāh ir-Raḥmān ir-Raḥīm";
-const BISMILLAH_EN: &str = "In the name of Allah, the Most Gracious, the Most Merciful";
 
 // Horizontal padding (spaces) between text and the vertical box border.
 const H_PADDING: usize = 4;
@@ -32,16 +28,16 @@ struct Line<'a> {
     color: Color,
 }
 
-/// Render the banner to stdout, honoring `args` and `theme`.
-pub fn render(args: &Args, theme: &Theme) -> io::Result<()> {
+/// Render `phrase` to stdout inside a decorative box, honoring `args` and `theme`.
+pub fn render(args: &Args, theme: &Theme, phrase: &Phrase) -> io::Result<()> {
     let stdout = io::stdout().lock();
     let mut out = BufWriter::new(stdout);
 
     let mut lines: Vec<Line> = Vec::with_capacity(3);
-    lines.push(Line { text: BISMILLAH_AR, color: theme.arabic });
+    lines.push(Line { text: phrase.arabic, color: theme.arabic });
     if args.translation {
-        lines.push(Line { text: BISMILLAH_TRANSLIT, color: theme.translit });
-        lines.push(Line { text: BISMILLAH_EN, color: theme.english });
+        lines.push(Line { text: phrase.translit, color: theme.translit });
+        lines.push(Line { text: phrase.english, color: theme.english });
     }
 
     let inner_width = inner_width(&lines);
@@ -53,14 +49,6 @@ pub fn render(args: &Args, theme: &Theme) -> io::Result<()> {
     }
     write_blank(&mut out, inner_width, theme)?;
     write_bottom(&mut out, inner_width, theme)?;
-
-    if args.random {
-        writeln!(out)?;
-        writeln!(
-            out,
-            "(note: --random will print a random Islamic phrase in a future release)"
-        )?;
-    }
 
     out.flush()
 }
