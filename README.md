@@ -80,11 +80,12 @@ tasmiyah
 ## 🛣️ Roadmap
 
 - [x] Step 1: Create repository
-- [ ] Step 2: Scaffold Rust project ← **in progress**
-- [ ] Step 3: Arabic banner with decorative box
-- [ ] Step 4: ANSI colors (gold/green theme)
-- [ ] Step 5: CLI flags (`clap`)
-- [ ] Step 6: Transliteration + English translation
+- [x] Step 2: Scaffold Rust project
+- [x] Step 3: Arabic banner with decorative box
+- [x] Step 4: ANSI colors (gold/green theme)
+- [x] Step 5: CLI flags (`clap`)
+- [x] Step 6: Transliteration + English translation
+- [ ] Step 7: Random Islamic phrases mode ← **next**
 - [ ] Step 7: Random Islamic phrases mode
 - [ ] Step 8: Cross-platform testing
 - [ ] Step 9: GitHub Actions release pipeline
