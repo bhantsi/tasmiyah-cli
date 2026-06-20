@@ -1,0 +1,35 @@
+[package]
+name = "tasmiyah-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["bhantsi"]
+description = "A beautiful, fast terminal greeting that prints Bismillah and Islamic phrases"
+license = "MIT"
+repository = "https://github.com/bhantsi/tasmiyah-cli-"
+homepage = "https://github.com/bhantsi/tasmiyah-cli-"
+readme = "README.md"
+keywords = ["cli", "islamic", "bismillah", "terminal", "greeting"]
+categories = ["command-line-utilities"]
+
+# The binary users will invoke from their shell
+[[bin]]
+name = "tasmiyah"
+path = "src/main.rs"
+
+[dependencies]
+# CLI argument parsing — the de-facto standard
+clap = { version = "4.5", features = ["derive"] }
+
+# Cross-platform terminal: colors, size detection, works on Windows too
+crossterm = "0.28"
+
+# Correct visual width for Unicode (essential for Arabic centering)
+unicode-width = "0.2"
+
+[profile.release]
+# Optimize for binary size + speed — important for a tool that runs at shell startup
+opt-level = 3
+lto = true            # Link-time optimization
+codegen-units = 1     # Better optimization at the cost of compile time
+strip = true          # Strip symbols from binary
+panic = "abort"       # Smaller binary, no unwinding needed
