@@ -88,3 +88,46 @@ pub fn default() -> &'static Phrase {
 pub fn random() -> &'static Phrase {
     &PHRASES[random_index()]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn phrase_set_is_non_empty() {
+        assert!(
+            !PHRASES.is_empty(),
+            "PHRASES must contain at least one entry"
+        );
+    }
+
+    #[test]
+    fn every_phrase_has_all_three_fields() {
+        for (i, p) in PHRASES.iter().enumerate() {
+            assert!(!p.arabic.trim().is_empty(), "phrase #{i}: arabic is empty");
+            assert!(
+                !p.translit.trim().is_empty(),
+                "phrase #{i}: translit is empty"
+            );
+            assert!(
+                !p.english.trim().is_empty(),
+                "phrase #{i}: english is empty"
+            );
+        }
+    }
+
+    #[test]
+    fn default_phrase_is_the_basmala() {
+        let p = default();
+        assert!(p.arabic.contains('ٱ') || p.arabic.contains('ا'));
+        assert!(p.translit.starts_with("Bismill"));
+    }
+
+    #[test]
+    fn random_index_is_in_bounds() {
+        // Many calls — every one must be a valid index.
+        for _ in 0..256 {
+            assert!(random_index() < PHRASES.len());
+        }
+    }
+}

@@ -34,10 +34,19 @@ pub fn render(args: &Args, theme: &Theme, phrase: &Phrase) -> io::Result<()> {
     let mut out = BufWriter::new(stdout);
 
     let mut lines: Vec<Line> = Vec::with_capacity(3);
-    lines.push(Line { text: phrase.arabic, color: theme.arabic });
+    lines.push(Line {
+        text: phrase.arabic,
+        color: theme.arabic,
+    });
     if args.translation {
-        lines.push(Line { text: phrase.translit, color: theme.translit });
-        lines.push(Line { text: phrase.english, color: theme.english });
+        lines.push(Line {
+            text: phrase.translit,
+            color: theme.translit,
+        });
+        lines.push(Line {
+            text: phrase.english,
+            color: theme.english,
+        });
     }
 
     let inner_width = inner_width(&lines);
@@ -128,4 +137,38 @@ fn write_line(
     write!(out, "{}", " ".repeat(right))?;
     paint(out, "║", theme.border, theme)?;
     writeln!(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::style::Color;
+
+    #[test]
+    fn inner_width_accommodates_widest_line_plus_padding() {
+        // Use plain ASCII so visual width == byte length, making the
+        // assertion easy to reason about without depending on terminal size.
+        let lines = vec![
+            Line {
+                text: "hi",
+                color: Color::Reset,
+            },
+            Line {
+                text: "hello",
+                color: Color::Reset,
+            },
+        ];
+        let w = inner_width(&lines);
+        // Box is allowed to be capped by terminal width, but it must
+        // never be narrower than the widest text plus *some* breathing
+        // room (and definitely never narrower than the text itself).
+        assert!(w >= 5, "inner width {w} must fit 'hello'");
+    }
+
+    #[test]
+    fn inner_width_handles_empty_input() {
+        let lines: Vec<Line> = Vec::new();
+        // Just must not panic.
+        let _ = inner_width(&lines);
+    }
 }

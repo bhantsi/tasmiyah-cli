@@ -30,7 +30,11 @@ impl Theme {
         Self {
             enabled: true,
             // Gold (matches a warm "Islamic manuscript" feel).
-            border: Color::Rgb { r: 218, g: 165, b: 32 },
+            border: Color::Rgb {
+                r: 218,
+                g: 165,
+                b: 32,
+            },
             arabic: Color::Green,
             translit: Color::Yellow,
             english: Color::White,
@@ -76,4 +80,32 @@ fn should_use_color(args: &Args) -> bool {
         return false;
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plain_theme_is_disabled() {
+        let t = Theme::plain();
+        assert!(!t.enabled);
+    }
+
+    #[test]
+    fn colored_theme_is_enabled() {
+        let t = Theme::colored();
+        assert!(t.enabled);
+    }
+
+    #[test]
+    fn no_color_flag_yields_plain_theme() {
+        let args = Args {
+            no_color: true,
+            translation: false,
+            random: false,
+        };
+        let t = Theme::for_args(&args);
+        assert!(!t.enabled, "--no-color must disable styling");
+    }
 }

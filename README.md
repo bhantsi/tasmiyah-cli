@@ -5,6 +5,9 @@
 [![Built with Rust](https://img.shields.io/badge/built_with-Rust-orange.svg)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey.svg)]()
+[![CI](https://github.com/bhantsi/tasmiyah-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/bhantsi/tasmiyah-cli/actions/workflows/ci.yml)
+[![Release](https://github.com/bhantsi/tasmiyah-cli/actions/workflows/release.yml/badge.svg)](https://github.com/bhantsi/tasmiyah-cli/actions/workflows/release.yml)
+[![Crates.io](https://img.shields.io/crates/v/tasmiyah-cli.svg)](https://crates.io/crates/tasmiyah-cli)
 
 ---
 
@@ -30,18 +33,34 @@ It's fast (single static binary, ~1-5ms startup), looks beautiful, and works on 
 
 ## 📦 Installation
 
-> 🚧 _Coming soon — being built step by step._
+### Via Cargo
 
 ```bash
-# Via cargo (once published)
 cargo install tasmiyah-cli
-
-# Via Homebrew (macOS/Linux)
-brew install bhantsi/tap/tasmiyah-cli
-
-# Via prebuilt binary
-# Download from the Releases page
 ```
+
+### Via Homebrew (macOS / Linux)
+
+```bash
+brew install bhantsi/tap/tasmiyah-cli
+```
+
+### Prebuilt binaries
+
+Grab the archive for your platform from the
+[Releases page](https://github.com/bhantsi/tasmiyah-cli/releases), extract it,
+and drop `tasmiyah` somewhere on your `PATH`:
+
+```bash
+# Linux x86_64 (static musl build — works on any distro)
+curl -L https://github.com/bhantsi/tasmiyah-cli/releases/latest/download/tasmiyah-x86_64-unknown-linux-musl.tar.gz \
+  | tar -xz
+sudo mv tasmiyah /usr/local/bin/
+```
+
+Archives are published for: Linux (x86_64 glibc/musl, aarch64 musl),
+macOS (Intel & Apple Silicon), and Windows (x86_64). Each is accompanied by
+a `.sha256` checksum file.
 
 ## 🚀 Usage
 
@@ -52,6 +71,10 @@ tasmiyah --translation   # show transliteration + English meaning
 tasmiyah --random        # random Islamic phrase (Alhamdulillah, SubhanAllah, ...)
 tasmiyah --help          # show all options
 ```
+
+📖 **Want more detail?** See the full [User Guide](docs/USER_GUIDE.md) for
+flag-by-flag reference, recipes, shell integration for every major shell,
+environment variables, and troubleshooting.
 
 ## 🐚 Shell Integration
 
@@ -86,9 +109,11 @@ tasmiyah
 - [x] Step 5: CLI flags (`clap`)
 - [x] Step 6: Transliteration + English translation
 - [x] Step 7: Random Islamic phrases mode
-- [ ] Step 8: Cross-platform testing ← **next**
-- [ ] Step 9: GitHub Actions release pipeline
-- [ ] Step 10: Publish to crates.io + Homebrew
+- [x] Step 8: Cross-platform testing (unit + integration tests, CI on Linux/macOS/Windows)
+- [x] Step 9: GitHub Actions release pipeline (prebuilt binaries for 6 targets, automated on tag push)
+- [x] Step 10: Publish to crates.io + Homebrew tap (automated by the release workflow)
+
+🎉 **All roadmap items complete!** Future work tracked in [GitHub Issues](https://github.com/bhantsi/tasmiyah-cli/issues).
 
 ## 🛠️ Build from source
 
@@ -98,6 +123,20 @@ cd tasmiyah-cli
 cargo build --release
 ./target/release/tasmiyah
 ```
+
+## 🧪 Running the tests
+
+```bash
+cargo test            # unit tests + cross-platform integration tests
+cargo fmt --check     # formatting
+cargo clippy -- -D warnings  # lints
+```
+
+## 🛬 Cutting a release (maintainers)
+
+See [docs/RELEASING.md](docs/RELEASING.md) for the full release process.
+Short version: bump `Cargo.toml`, tag `v*.*.*`, push — the GitHub Actions
+release pipeline builds and publishes binaries for all 6 targets automatically.
 
 ## 📜 License
 

@@ -12,6 +12,10 @@ mod theme;
 fn main() -> std::io::Result<()> {
     let args = cli::Args::parse();
     let theme = theme::Theme::for_args(&args);
-    let phrase = if args.random { phrases::random() } else { phrases::default() };
+    let phrase = if args.random {
+        phrases::random()
+    } else {
+        phrases::default()
+    };
     banner::render(&args, &theme, phrase)
 }

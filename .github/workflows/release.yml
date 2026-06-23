@@ -1,0 +1,290 @@
+name: Release
+
+# Roadmap Steps 9 & 10 — cross-platform release pipeline.
+#
+# Triggers
+# --------
+# • A pushed tag matching `v*.*.*` (the normal path).
+# • Manual dispatch via the Actions tab (useful for testing the workflow
+#   itself without cutting a real tag).
+#
+# What it does
+# ------------
+# 1. Creates a draft GitHub Release for the tag (if one doesn't yet exist).
+# 2. Builds the `tasmiyah` binary on a matrix of OS/architecture targets.
+# 3. Strips/optimizes the binary, packages it (tar.gz on *nix, zip on Windows),
+#    generates a SHA-256 checksum, and uploads everything to the release.
+# 4. Publishes the crate to crates.io (`cargo publish`).
+# 5. Bumps the formula in the bhantsi/homebrew-tap repository so
+#    `brew install bhantsi/tap/tasmiyah-cli` picks up the new version.
+# 6. Flips the GitHub Release from draft to published.
+#
+# The heavy lifting (archive naming, checksum generation, uploading) is done
+# by `taiki-e/upload-rust-binary-action`, the de-facto standard for Rust
+# release workflows.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.1.0). Must already exist."
+        required: true
+        type: string
+
+permissions:
+  contents: write # required to create/update releases and upload assets
+
+env:
+  CARGO_TERM_COLOR: always
+  # Bin name as defined in Cargo.toml ([[bin]] name = "tasmiyah").
+  BIN_NAME: tasmiyah
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Make sure a release exists for the tag, so the build jobs can attach
+  #    their artifacts to it. Created as a draft on first run; the final job
+  #    publishes it once every upload succeeds.
+  # ---------------------------------------------------------------------------
+  create-release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve tag
+        id: resolve
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create / update draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.resolve.outputs.tag }}
+          name: ${{ steps.resolve.outputs.tag }}
+          draft: true
+          generate_release_notes: true
+
+  # ---------------------------------------------------------------------------
+  # 2. Cross-platform build matrix. Every entry produces one archive +
+  #    checksum, attached to the draft release.
+  # ---------------------------------------------------------------------------
+  build:
+    name: build (${{ matrix.target }})
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux — dynamically linked against glibc. Smallest, but only
+          # runs on glibc-compatible systems.
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+
+          # Linux — statically linked against musl. Truly portable;
+          # what most users actually want.
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+
+          # Linux ARM64 — for Raspberry Pi 4/5, ARM servers, Apple Silicon
+          # under Docker, etc. Built statically against musl for portability.
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+
+          # macOS Intel
+          - target: x86_64-apple-darwin
+            os: macos-13
+
+          # macOS Apple Silicon
+          - target: aarch64-apple-darwin
+            os: macos-latest
+
+          # Windows
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      # Upload the binary + checksum to the draft release. This action also
+      # cross-compiles for musl/aarch64 targets transparently.
+      - name: Build & upload archive
+        uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: ${{ env.BIN_NAME }}
+          target: ${{ matrix.target }}
+          tar: unix # use .tar.gz on linux/macos
+          zip: windows # use .zip on windows
+          checksum: sha256
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: refs/tags/${{ needs.create-release.outputs.tag }}
+
+  # ---------------------------------------------------------------------------
+  # 3. Publish the crate to crates.io. Independent of the build matrix
+  #    (crates.io doesn't care about prebuilt binaries) but depends on
+  #    the release existing so we don't publish to crates.io for a tag
+  #    that never made it to GitHub.
+  # ---------------------------------------------------------------------------
+  publish-crate:
+    name: Publish to crates.io
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.create-release.outputs.tag }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify Cargo.toml version matches the tag
+        shell: bash
+        run: |
+          # Strip the leading 'v' from the tag (v0.2.0 -> 0.2.0).
+          tag_version="${TAG#v}"
+          # Pull the version out of Cargo.toml without depending on extra tools.
+          cargo_version=$(
+            awk -F'"' '/^\s*version\s*=/ { print $2; exit }' Cargo.toml
+          )
+          echo "tag    -> $tag_version"
+          echo "cargo  -> $cargo_version"
+          if [[ "$tag_version" != "$cargo_version" ]]; then
+            echo "::error::Tag ($tag_version) does not match Cargo.toml version ($cargo_version)."
+            exit 1
+          fi
+        env:
+          TAG: ${{ needs.create-release.outputs.tag }}
+
+      - name: cargo publish
+        run: cargo publish --token "$CARGO_REGISTRY_TOKEN"
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # 4. Bump the Homebrew tap formula at bhantsi/homebrew-tap so
+  #    `brew install bhantsi/tap/tasmiyah-cli` picks up the new version
+  #    and checksums.
+  #
+  #    Requires the HOMEBREW_TAP_TOKEN secret: a fine-grained Personal
+  #    Access Token with `contents: write` on the tap repository.
+  #
+  #    Skipped automatically if the secret isn't configured (so the first
+  #    release of this repo doesn't fail on a step that depends on a tap
+  #    that may not exist yet).
+  # ---------------------------------------------------------------------------
+  bump-homebrew:
+    name: Bump Homebrew tap
+    needs: [create-release, build]
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    steps:
+      - name: Check that a tap token is configured
+        id: gate
+        shell: bash
+        run: |
+          if [[ -z "$HOMEBREW_TAP_TOKEN" ]]; then
+            echo "HOMEBREW_TAP_TOKEN is not set — skipping tap bump."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Checkout this repo (for the formula template)
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.create-release.outputs.tag }}
+          path: source
+
+      - name: Checkout the tap
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: bhantsi/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Render and commit the updated formula
+        if: steps.gate.outputs.skip != 'true'
+        shell: bash
+        env:
+          TAG: ${{ needs.create-release.outputs.tag }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          base="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+
+          # Fetch the .sha256 sidecar that the build job uploaded for each
+          # target. Each file contains a single line like:
+          #     <sha>  <archive>
+          fetch_sha() {
+            local target="$1"
+            local archive="tasmiyah-${target}.tar.gz"
+            curl -fsSL "${base}/${archive}.sha256" | awk '{print $1}'
+          }
+
+          sha_linux_x86=$(fetch_sha x86_64-unknown-linux-musl)
+          sha_linux_arm=$(fetch_sha aarch64-unknown-linux-musl)
+          sha_macos_x86=$(fetch_sha x86_64-apple-darwin)
+          sha_macos_arm=$(fetch_sha aarch64-apple-darwin)
+
+          mkdir -p tap/Formula
+          # Render the formula from the template in this repo. The template
+          # uses simple {{VAR}} placeholders so it's easy to read.
+          sed \
+            -e "s|{{VERSION}}|${version}|g" \
+            -e "s|{{SHA_LINUX_X86}}|${sha_linux_x86}|g" \
+            -e "s|{{SHA_LINUX_ARM}}|${sha_linux_arm}|g" \
+            -e "s|{{SHA_MACOS_X86}}|${sha_macos_x86}|g" \
+            -e "s|{{SHA_MACOS_ARM}}|${sha_macos_arm}|g" \
+            source/docs/homebrew/tasmiyah-cli.rb.tmpl \
+            > tap/Formula/tasmiyah-cli.rb
+
+          cd tap
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/tasmiyah-cli.rb
+          if git diff --cached --quiet; then
+            echo "Formula already up to date for ${version}."
+          else
+            git commit -m "tasmiyah-cli ${version}"
+            git push
+          fi
+
+  # ---------------------------------------------------------------------------
+  # 5. Once binaries are uploaded, crates.io publish succeeded, and the
+  #    tap is bumped (or skipped), flip the draft release to public.
+  # ---------------------------------------------------------------------------
+  publish:
+    name: Publish release
+    needs: [create-release, build, publish-crate, bump-homebrew]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.create-release.outputs.tag }}
+          draft: false
