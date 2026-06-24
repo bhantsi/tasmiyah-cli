@@ -17,8 +17,9 @@ first run to advanced shell integration. If you only have 30 seconds, jump to
 6. [Environment Variables](#-environment-variables)
 7. [Phrase Library](#-phrase-library)
 8. [Tips & Troubleshooting](#-tips--troubleshooting)
-9. [Uninstalling](#-uninstalling)
-10. [Getting Help](#-getting-help)
+9. [Upgrading](#-upgrading)
+10. [Uninstalling](#-uninstalling)
+11. [Getting Help](#-getting-help)
 
 ---
 
@@ -402,6 +403,81 @@ it explicitly:
 
 ```bash
 time tasmiyah --no-color
+```
+
+---
+
+## ⬆️ Upgrading
+
+Upgrade through the same channel you originally installed from.
+
+### Cargo
+
+```bash
+cargo install tasmiyah-cli --force
+```
+
+The `--force` flag is required — without it `cargo install` refuses to
+overwrite the existing `tasmiyah` binary in `~/.cargo/bin/`. To pin a
+specific version:
+
+```bash
+cargo install tasmiyah-cli --version 0.2.0 --force
+```
+
+If you use [`cargo-update`](https://crates.io/crates/cargo-update), one
+command updates every crate-installed binary on your system:
+
+```bash
+cargo install-update -a       # update everything
+cargo install-update tasmiyah-cli   # or just this one
+```
+
+### Homebrew
+
+```bash
+brew update
+brew upgrade bhantsi/tap/tasmiyah-cli
+```
+
+`brew update` refreshes the tap so Homebrew sees the new formula version;
+`brew upgrade` then downloads and installs the new bottle.
+
+### Prebuilt binary
+
+Re-download the latest archive for your platform from the
+[Releases page](https://github.com/bhantsi/tasmiyah-cli/releases) and
+replace the file on your `PATH`. The same one-liner used for installation
+works for upgrading — it simply overwrites the previous binary:
+
+```bash
+# Linux x86_64 (static musl build)
+curl -L https://github.com/bhantsi/tasmiyah-cli/releases/latest/download/tasmiyah-x86_64-unknown-linux-musl.tar.gz \
+  | tar -xz
+sudo install -m 755 tasmiyah /usr/local/bin/tasmiyah
+```
+
+### From source
+
+```bash
+cd path/to/tasmiyah-cli
+git pull
+cargo build --release
+sudo cp target/release/tasmiyah /usr/local/bin/
+```
+
+### Verifying the upgrade
+
+```bash
+tasmiyah --version
+```
+
+Should report the new version. If it still prints the old one, check that
+the binary you just installed is actually the first `tasmiyah` on your
+`PATH`:
+
+```bash
+which -a tasmiyah
 ```
 
 ---

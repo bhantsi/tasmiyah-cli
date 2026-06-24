@@ -50,6 +50,23 @@ macOS (Apple Silicon), and Windows (x86_64). Each is accompanied by a
 `.sha256` checksum file. Intel-Mac users should install with
 `cargo install tasmiyah-cli`.
 
+### Upgrading
+
+Use the same channel you originally installed from:
+
+```bash
+# Cargo — --force is required to overwrite the existing binary
+cargo install tasmiyah-cli --force
+
+# Homebrew
+brew update && brew upgrade bhantsi/tap/tasmiyah-cli
+
+# Prebuilt binary — re-download the latest archive and replace the file
+# on your PATH (see the install command above).
+```
+
+Confirm with `tasmiyah --version`.
+
 ## 🚀 Usage
 
 ```bash
