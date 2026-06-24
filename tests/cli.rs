@@ -20,7 +20,10 @@ fn run_with_env(args: &[&str], env: &[(&str, &str)]) -> (String, String, i32) {
     cmd.args(args)
         // Force the "no colors" code path so the output is deterministic
         // and identical across platforms regardless of TTY detection.
-        .env("NO_COLOR", "1");
+        .env("NO_COLOR", "1")
+        // Suppress the crates.io update-check footer so tests stay
+        // hermetic (no network, deterministic output).
+        .env("NO_UPDATE_NOTIFIER", "1");
     for (k, v) in env {
         cmd.env(k, v);
     }

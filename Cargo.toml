@@ -26,6 +26,11 @@ crossterm = "0.28"
 # Correct visual width for Unicode (essential for Arabic centering)
 unicode-width = "0.2"
 
+# Daily-cached crates.io version check so users see a one-line notice
+# when a new release ships. Pulled in with default features (`ureq`
+# blocking client, no `reqwest`/OpenSSL), runs once per 24h per user.
+update-informer = "1"
+
 [profile.release]
 # Optimize for binary size + speed — important for a tool that runs at shell startup
 opt-level = 3

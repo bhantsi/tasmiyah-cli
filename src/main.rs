@@ -10,6 +10,7 @@ mod cli;
 mod font;
 mod phrases;
 mod theme;
+mod update;
 
 fn main() -> std::io::Result<()> {
     let args = cli::Args::parse();
@@ -20,5 +21,11 @@ fn main() -> std::io::Result<()> {
     } else {
         phrases::default()
     };
-    banner::render(&args, &theme, font, phrase)
+    let color = theme.enabled;
+    banner::render(&args, &theme, font, phrase)?;
+    // Non-fatal, daily-cached check for a newer release on crates.io.
+    // All gating (TTY, opt-out env vars, error swallowing) lives in
+    // `update::notify` so `main` stays a straight pipeline.
+    update::notify(color);
+    Ok(())
 }
