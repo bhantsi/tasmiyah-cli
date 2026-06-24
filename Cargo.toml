@@ -1,6 +1,6 @@
 [package]
 name = "tasmiyah-cli"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["bhantsi"]
 description = "A beautiful, fast terminal greeting that prints Bismillah and Islamic phrases"
