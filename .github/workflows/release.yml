@@ -252,6 +252,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          # Propagate `set -e` into $(...) subshells so a failing
+          # fetch_sha aborts the job instead of silently yielding
+          # an empty string (which the previous version of this
+          # script committed verbatim as `sha256 ""`).
+          shopt -s inherit_errexit
           version="${TAG#v}"
 
           # Fetch the .sha256 sidecar that the build job uploaded for
@@ -260,18 +265,28 @@ jobs:
           # callers — we use `gh release download` (authenticated)
           # instead of `curl`.
           #
+          # taiki-e/upload-rust-binary-action names the sidecar
+          # `tasmiyah-<target>.sha256` (the `.sha256` REPLACES the
+          # archive extension; it is NOT appended to `.tar.gz`).
+          #
           # Each .sha256 file contains a single line:  <sha>  <archive>
           fetch_sha() {
             local target="$1"
-            local archive="tasmiyah-${target}.tar.gz"
+            local sidecar="tasmiyah-${target}.sha256"
             local tmp
             tmp=$(mktemp -d)
             gh release download "${TAG}" \
               --repo "${GITHUB_REPOSITORY}" \
-              --pattern "${archive}.sha256" \
+              --pattern "${sidecar}" \
               --dir "${tmp}"
-            awk '{print $1}' "${tmp}/${archive}.sha256"
+            local sha
+            sha=$(awk '{print $1}' "${tmp}/${sidecar}")
             rm -rf "${tmp}"
+            if [[ -z "${sha}" || ! "${sha}" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::fetch_sha(${target}) produced an invalid SHA: '${sha}'" >&2
+              return 1
+            fi
+            printf '%s' "${sha}"
           }
 
           sha_linux_x86=$(fetch_sha x86_64-unknown-linux-musl)
