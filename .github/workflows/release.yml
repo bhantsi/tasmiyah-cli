@@ -175,17 +175,29 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          # Capture stderr so we can detect the "already uploaded" case
-          # and treat it as success — this makes the job idempotent if
-          # the workflow re-runs for a tag whose crate already shipped
-          # (e.g. after fixing a later step like the Homebrew bump).
-          if cargo publish --token "$CARGO_REGISTRY_TOKEN" 2> publish.err; then
-            cat publish.err >&2
+          # Capture cargo's exit code *directly* — we cannot rely on
+          # `if cargo publish; then ...; fi` because bash's if/then/fi
+          # returns 0 when the condition is false and no branch runs,
+          # which would silently mask publish failures and ship a green
+          # workflow that never actually uploaded to crates.io.
+          #
+          # The stderr log goes to /tmp (NOT the working directory),
+          # otherwise cargo refuses to publish because the tree is dirty.
+          # `--token` was deprecated upstream; cargo picks up the token
+          # from $CARGO_REGISTRY_TOKEN in the env block below.
+          publish_err=$(mktemp)
+          trap 'rm -f "$publish_err"' EXIT
+
+          cargo publish 2> "$publish_err"
+          rc=$?
+
+          cat "$publish_err" >&2
+          if [[ $rc -eq 0 ]]; then
             exit 0
           fi
-          rc=$?
-          cat publish.err >&2
-          if grep -qiE "already (uploaded|exists)" publish.err; then
+          # Idempotency: treat "already uploaded" as success so re-runs
+          # for a tag whose crate already shipped don't fail the job.
+          if grep -qiE "already (uploaded|exists)" "$publish_err"; then
             echo "::notice::Crate version is already on crates.io — skipping."
             exit 0
           fi
