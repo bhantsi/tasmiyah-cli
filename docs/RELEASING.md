@@ -28,7 +28,7 @@ git push origin main --follow-tags
 Once the tag lands, the **Release** workflow:
 
 1. Creates a draft GitHub Release named `v0.2.0`.
-2. Builds prebuilt binaries on a matrix of 6 targets (see below).
+2. Builds prebuilt binaries on a matrix of 5 targets (see below).
 3. Uploads `.tar.gz` / `.zip` archives **and** matching `.sha256` checksums to the release.
 4. Publishes the crate to **crates.io** (`cargo publish`).
 5. Bumps the formula in the **`bhantsi/homebrew-tap`** repository so `brew install bhantsi/tap/tasmiyah-cli` picks up the new version.
@@ -86,11 +86,10 @@ brew install bhantsi/tap/tasmiyah-cli
 | `x86_64-unknown-linux-gnu` | `ubuntu-latest` | `.tar.gz` |
 | `x86_64-unknown-linux-musl` | `ubuntu-latest` | `.tar.gz` (static) |
 | `aarch64-unknown-linux-musl` | `ubuntu-latest` | `.tar.gz` (static) |
-| `x86_64-apple-darwin` | `macos-13` | `.tar.gz` |
 | `aarch64-apple-darwin` | `macos-latest` | `.tar.gz` |
 | `x86_64-pc-windows-msvc` | `windows-latest` | `.zip` |
 
-Each archive contains the compiled `tasmiyah` binary and is accompanied by a `.sha256` file.
+Each archive contains the compiled `tasmiyah` binary and is accompanied by a `.sha256` file. Intel Macs run the `aarch64-apple-darwin` build under Rosetta 2.
 
 ---
 

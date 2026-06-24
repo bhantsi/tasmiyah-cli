@@ -1,7 +1,7 @@
 name: CI
 
-# Cross-platform testing for Step 8 of the roadmap.
-# Runs format check, clippy, build, and tests on Linux, macOS, and Windows.
+# Cross-platform testing: format, clippy, build, and tests on Linux,
+# macOS, and Windows.
 
 on:
   push:

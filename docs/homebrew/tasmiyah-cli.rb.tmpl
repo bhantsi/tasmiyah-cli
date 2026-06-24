@@ -21,13 +21,12 @@ class TasmiyahCli < Formula
   license "MIT"
 
   on_macos do
+    # Only Apple Silicon is shipped as a prebuilt binary. Intel Mac users
+    # should install via `cargo install tasmiyah-cli` instead — the ARM
+    # binary does not run on Intel under Rosetta 2.
     on_arm do
       url "https://github.com/bhantsi/tasmiyah-cli/releases/download/v#{version}/tasmiyah-aarch64-apple-darwin.tar.gz"
       sha256 "{{SHA_MACOS_ARM}}"
-    end
-    on_intel do
-      url "https://github.com/bhantsi/tasmiyah-cli/releases/download/v#{version}/tasmiyah-x86_64-apple-darwin.tar.gz"
-      sha256 "{{SHA_MACOS_X86}}"
     end
   end
 

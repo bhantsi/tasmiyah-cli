@@ -17,19 +17,6 @@
 
 It's fast (single static binary, ~1-5ms startup), looks beautiful, and works on **Linux, macOS, and Windows**.
 
-## 🖼️ Preview
-
-```
-╔════════════════════════════════════════════╗
-║                                            ║
-║      بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ      ║
-║                                            ║
-║    Bismillāh ir-Raḥmān ir-Raḥīm           ║
-║    In the name of Allah, the Most          ║
-║    Gracious, the Most Merciful             ║
-║                                            ║
-╚════════════════════════════════════════════╝
-```
 
 ## 📦 Installation
 
@@ -59,8 +46,9 @@ sudo mv tasmiyah /usr/local/bin/
 ```
 
 Archives are published for: Linux (x86_64 glibc/musl, aarch64 musl),
-macOS (Intel & Apple Silicon), and Windows (x86_64). Each is accompanied by
-a `.sha256` checksum file.
+macOS (Apple Silicon), and Windows (x86_64). Each is accompanied by a
+`.sha256` checksum file. Intel-Mac users should install with
+`cargo install tasmiyah-cli`.
 
 ## 🚀 Usage
 
@@ -76,46 +64,7 @@ tasmiyah --help          # show all options
 flag-by-flag reference, recipes, shell integration for every major shell,
 environment variables, and troubleshooting.
 
-## 🐚 Shell Integration
-
-Add to your shell config to print Bismillah every time you open a terminal:
-
-**Bash** (`~/.bashrc`):
-```bash
-tasmiyah
-```
-
-**Zsh** (`~/.zshrc`):
-```bash
-tasmiyah
-```
-
-**Fish** (`~/.config/fish/config.fish`):
-```fish
-tasmiyah
-```
-
-**PowerShell** (`$PROFILE`):
-```powershell
-tasmiyah
-```
-
-## 🛣️ Roadmap
-
-- [x] Step 1: Create repository
-- [x] Step 2: Scaffold Rust project
-- [x] Step 3: Arabic banner with decorative box
-- [x] Step 4: ANSI colors (gold/green theme)
-- [x] Step 5: CLI flags (`clap`)
-- [x] Step 6: Transliteration + English translation
-- [x] Step 7: Random Islamic phrases mode
-- [x] Step 8: Cross-platform testing (unit + integration tests, CI on Linux/macOS/Windows)
-- [x] Step 9: GitHub Actions release pipeline (prebuilt binaries for 6 targets, automated on tag push)
-- [x] Step 10: Publish to crates.io + Homebrew tap (automated by the release workflow)
-
-🎉 **All roadmap items complete!** Future work tracked in [GitHub Issues](https://github.com/bhantsi/tasmiyah-cli/issues).
-
-## 🛠️ Build from source
+## ️ Build from source
 
 ```bash
 git clone https://github.com/bhantsi/tasmiyah-cli.git
@@ -132,11 +81,7 @@ cargo fmt --check     # formatting
 cargo clippy -- -D warnings  # lints
 ```
 
-## 🛬 Cutting a release (maintainers)
-
-See [docs/RELEASING.md](docs/RELEASING.md) for the full release process.
-Short version: bump `Cargo.toml`, tag `v*.*.*`, push — the GitHub Actions
-release pipeline builds and publishes binaries for all 6 targets automatically.
+Maintainers: see [docs/RELEASING.md](docs/RELEASING.md) for the release process.
 
 ## 📜 License
 
