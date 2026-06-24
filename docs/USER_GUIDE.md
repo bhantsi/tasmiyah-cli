@@ -302,6 +302,8 @@ tasmiyah --random --translation
 |----------|--------|
 | `NO_COLOR` | If set to **any** value (even empty), disables ANSI colors. Standardized at <https://no-color.org>. |
 | `TASMIYAH_FONT` | Override font detection. Set to `nerd` (or `nerd-font`) to force Nerd-Font layout, or `standard` to force the plain layout. Lower precedence than the `--font` flag. |
+| `NO_UPDATE_NOTIFIER` | If set to **any** value, suppresses the "a new release is available" footer that `tasmiyah` may print after the banner. See [Upgrading](#-upgrading). |
+| `CI` | If set (most CI systems do this automatically), also suppresses the update-check footer. |
 
 stdout TTY detection also disables colors automatically when output is
 redirected or piped — so you almost never need to set `NO_COLOR` manually.
@@ -411,15 +413,21 @@ time tasmiyah --no-color
 
 Upgrade through the same channel you originally installed from.
 
+> 📡 `tasmiyah` checks crates.io at most once every 24 hours and prints a
+> short footer when a newer version exists. The check is skipped when
+> stdout isn't a TTY (so scripts stay clean) and can be disabled entirely
+> with `NO_UPDATE_NOTIFIER=1` in your environment.
+
 ### Cargo
 
 ```bash
-cargo install tasmiyah-cli --force
+cargo install tasmiyah-cli
 ```
 
-The `--force` flag is required — without it `cargo install` refuses to
-overwrite the existing `tasmiyah` binary in `~/.cargo/bin/`. To pin a
-specific version:
+`cargo install` auto-detects that a newer version exists and replaces the
+binary in `~/.cargo/bin/`. You only need `--force` if the installed
+version already matches the latest (i.e. you want to reinstall the same
+version) or you're downgrading:
 
 ```bash
 cargo install tasmiyah-cli --version 0.2.0 --force
@@ -429,8 +437,8 @@ If you use [`cargo-update`](https://crates.io/crates/cargo-update), one
 command updates every crate-installed binary on your system:
 
 ```bash
-cargo install-update -a       # update everything
-cargo install-update tasmiyah-cli   # or just this one
+cargo install-update -a              # update everything
+cargo install-update tasmiyah-cli    # or just this one
 ```
 
 ### Homebrew
@@ -479,6 +487,17 @@ the binary you just installed is actually the first `tasmiyah` on your
 ```bash
 which -a tasmiyah
 ```
+
+### Silencing the update-check footer
+
+```bash
+export NO_UPDATE_NOTIFIER=1   # add to ~/.bashrc / ~/.zshrc to persist
+```
+
+The footer is also automatically suppressed when:
+
+* Stdout isn't a TTY (scripts, pipes, redirects).
+* The `CI` env var is set.
 
 ---
 

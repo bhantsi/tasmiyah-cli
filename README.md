@@ -52,11 +52,13 @@ macOS (Apple Silicon), and Windows (x86_64). Each is accompanied by a
 
 ### Upgrading
 
-Use the same channel you originally installed from:
+`tasmiyah` prints a one-line notice the next time you run it after a new
+release lands on crates.io. To actually upgrade, use the same channel you
+originally installed from:
 
 ```bash
-# Cargo — --force is required to overwrite the existing binary
-cargo install tasmiyah-cli --force
+# Cargo — auto-detects the new version and replaces the binary.
+cargo install tasmiyah-cli
 
 # Homebrew
 brew update && brew upgrade bhantsi/tap/tasmiyah-cli
@@ -65,7 +67,8 @@ brew update && brew upgrade bhantsi/tap/tasmiyah-cli
 # on your PATH (see the install command above).
 ```
 
-Confirm with `tasmiyah --version`.
+Confirm with `tasmiyah --version`. To silence the update-check footer,
+set `NO_UPDATE_NOTIFIER=1` in your shell rc.
 
 ## 🚀 Usage
 
