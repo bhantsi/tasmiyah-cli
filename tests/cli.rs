@@ -12,13 +12,19 @@ fn bin() -> Command {
 }
 
 fn run(args: &[&str]) -> (String, String, i32) {
-    let out = bin()
-        .args(args)
+    run_with_env(args, &[])
+}
+
+fn run_with_env(args: &[&str], env: &[(&str, &str)]) -> (String, String, i32) {
+    let mut cmd = bin();
+    cmd.args(args)
         // Force the "no colors" code path so the output is deterministic
         // and identical across platforms regardless of TTY detection.
-        .env("NO_COLOR", "1")
-        .output()
-        .expect("failed to execute tasmiyah binary");
+        .env("NO_COLOR", "1");
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    let out = cmd.output().expect("failed to execute tasmiyah binary");
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
     let code = out.status.code().unwrap_or(-1);
@@ -33,8 +39,70 @@ fn prints_default_basmala() {
         stdout.contains("بِسْمِ"),
         "stdout missing Arabic Basmala:\n{stdout}"
     );
-    // Box-drawing border must be rendered.
-    assert!(stdout.contains("╔") && stdout.contains("╝"));
+}
+
+#[test]
+fn classic_style_renders_a_box() {
+    let (stdout, _stderr, code) = run(&["--style", "classic"]);
+    assert_eq!(code, 0);
+    // Classic style is the v0.1 unicode-box renderer; its border must
+    // include the four box corners.
+    assert!(
+        stdout.contains("╔") && stdout.contains("╗"),
+        "classic style missing top corners:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("╚") && stdout.contains("╝"),
+        "classic style missing bottom corners:\n{stdout}"
+    );
+}
+
+#[test]
+fn centered_style_includes_the_bismillah_logo() {
+    let (stdout, _stderr, code) = run(&["--style", "centered"]);
+    assert_eq!(code, 0);
+    // The ANSI Shadow logo uses solid blocks (█) in every row.
+    // Centered output should contain many of them (the logo is wide).
+    let block_count = stdout.matches('█').count();
+    assert!(
+        block_count >= 100,
+        "centered style logo missing — only {block_count} block chars in output:\n{stdout}"
+    );
+    // The phrase itself must still appear under the logo.
+    assert!(
+        stdout.contains("بِسْمِ"),
+        "centered style missing Arabic phrase:\n{stdout}"
+    );
+}
+
+#[test]
+fn minimal_style_has_no_decoration() {
+    let (stdout, _stderr, code) = run(&["--style", "minimal"]);
+    assert_eq!(code, 0);
+    // No box, no logo blocks, no padding.
+    assert!(!stdout.contains('╔'));
+    assert!(!stdout.contains('║'));
+    assert!(!stdout.contains('█'));
+    assert!(
+        stdout.contains("بِسْمِ"),
+        "minimal style missing Arabic phrase:\n{stdout}"
+    );
+}
+
+#[test]
+fn minimal_style_with_translation_has_three_lines() {
+    let (stdout, _stderr, code) = run(&["--style", "minimal", "--translation"]);
+    assert_eq!(code, 0);
+    // Three content lines: arabic, translit, english. Each terminated
+    // by `\n`, so splitting on `\n` and dropping the empty trailing
+    // element yields exactly 3.
+    let lines: Vec<&str> = stdout.split_inclusive('\n').collect();
+    assert_eq!(
+        lines.len(),
+        3,
+        "minimal --translation should produce 3 lines, got {}:\n{stdout}",
+        lines.len()
+    );
 }
 
 #[test]
@@ -104,4 +172,25 @@ fn version_flag_reports_cargo_version() {
 fn unknown_flag_is_rejected() {
     let (_stdout, _stderr, code) = run(&["--definitely-not-a-real-flag"]);
     assert_ne!(code, 0, "unknown flag must produce a non-zero exit code");
+}
+
+#[test]
+fn font_env_var_is_accepted() {
+    // Setting TASMIYAH_FONT must not crash the binary and must still
+    // produce output containing the phrase.
+    let (stdout, _stderr, code) =
+        run_with_env(&["--style", "classic"], &[("TASMIYAH_FONT", "nerd")]);
+    assert_eq!(code, 0);
+    assert!(stdout.contains("بِسْمِ"));
+}
+
+#[test]
+fn font_flag_overrides_env() {
+    // Explicit --font standard must take precedence over the env var.
+    let (stdout, _stderr, code) = run_with_env(
+        &["--style", "classic", "--font", "standard"],
+        &[("TASMIYAH_FONT", "nerd")],
+    );
+    assert_eq!(code, 0);
+    assert!(stdout.contains("بِسْمِ"));
 }

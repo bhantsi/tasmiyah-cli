@@ -104,6 +104,8 @@ mod tests {
             no_color: true,
             translation: false,
             random: false,
+            style: crate::cli::StyleKind::Centered,
+            font: crate::cli::FontArg::Auto,
         };
         let t = Theme::for_args(&args);
         assert!(!t.enabled, "--no-color must disable styling");

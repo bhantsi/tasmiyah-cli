@@ -32,20 +32,30 @@ cargo build --release
 ./target/release/tasmiyah
 ```
 
-You'll see the Basmala framed in a gold/green decorative box:
+You'll see a large `BISMILLAH` logo centered in your terminal, with the
+Arabic Basmala underneath it in gold/green:
 
 ```
-╔════════════════════════════════════════════╗
-║                                            ║
-║      بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ      ║
-║                                            ║
-╚════════════════════════════════════════════╝
+              ██████╗ ██╗███████╗███╗   ███╗██╗██╗     ██╗      █████╗ ██╗  ██╗
+              ██╔══██╗██║██╔════╝████╗ ████║██║██║     ██║     ██╔══██╗██║  ██║
+              ██████╔╝██║███████╗██╔████╔██║██║██║     ██║     ███████║███████║
+              ██╔══██╗██║╚════██║██║╚██╔╝██║██║██║     ██║     ██╔══██║██╔══██║
+              ██████╔╝██║███████║██║ ╚═╝ ██║██║███████╗███████╗██║  ██║██║  ██║
+              ╚═════╝ ╚═╝╚══════╝╚═╝     ╚═╝╚═╝╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝
+
+                  بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
 ```
 
 Add `--translation` to also see the transliteration and English meaning:
 
 ```bash
 tasmiyah --translation
+```
+
+Prefer the original v0.1 unicode-box layout? Pass `--style classic`:
+
+```bash
+tasmiyah --style classic --translation
 ```
 
 That's it — the rest of this guide just shows you the knobs.
@@ -111,6 +121,8 @@ short (`-x`) and a long (`--xxx`) form.
 | `--no-color` | `-n` | Disable ANSI colors. Useful when piping output or for plain-text logs. |
 | `--translation` | `-t` | Show the Latin-script transliteration **and** English meaning under the Arabic. |
 | `--random` | `-r` | Pick a random phrase from the library (instead of the Basmala). |
+| `--style <STYLE>` | `-s` | Pick a layout: `centered` (default, large logo), `classic` (v0.1 unicode box), or `minimal` (text only). |
+| `--font <FONT>` | `-f` | Layout hint for Arabic widths: `auto` (default), `standard`, or `nerd`. See [Environment Variables](#-environment-variables). |
 | `--help` | `-h` | Print the auto-generated help and exit. |
 | `--version` | `-V` | Print the version (from `Cargo.toml`) and exit. |
 
@@ -168,6 +180,26 @@ This is the safe variant for:
 
 > 💡 You don't even need the flag if you redirect — `tasmiyah` auto-detects
 > that stdout isn't a terminal and disables colors automatically.
+
+### Pick a visual style
+
+```bash
+tasmiyah --style centered        # default: large logo, centered
+tasmiyah --style classic          # the v0.1 unicode-box layout
+tasmiyah --style minimal          # plain text only (great for prompts)
+```
+
+On very narrow terminals (`< 65` columns), the `centered` style automatically
+skips the logo and just prints the centered text lines so nothing wraps.
+
+### One-line greeting in a shell prompt
+
+The `minimal` style emits exactly the phrase line(s), no decoration —
+perfect for prompt frameworks:
+
+```bash
+tasmiyah --style minimal --translation
+```
 
 ### Save the banner to a file
 
@@ -268,6 +300,7 @@ tasmiyah --random --translation
 | Variable | Effect |
 |----------|--------|
 | `NO_COLOR` | If set to **any** value (even empty), disables ANSI colors. Standardized at <https://no-color.org>. |
+| `TASMIYAH_FONT` | Override font detection. Set to `nerd` (or `nerd-font`) to force Nerd-Font layout, or `standard` to force the plain layout. Lower precedence than the `--font` flag. |
 
 stdout TTY detection also disables colors automatically when output is
 redirected or piped — so you almost never need to set `NO_COLOR` manually.
@@ -311,6 +344,23 @@ such as:
 - On macOS: the system default usually works out of the box.
 - On Windows Terminal: install *Noto Sans Arabic* and add it to your profile's
   `fontFace`.
+
+### The Arabic line is shifted by a column or two
+
+Nerd Fonts (MesloLGS NF, FiraCode NF, JetBrainsMono NF, etc.) sometimes draw
+Arabic glyphs slightly wider than `unicode-width` reports. `tasmiyah` tries to
+detect this automatically; if it doesn't, force it:
+
+```bash
+tasmiyah --font nerd            # one-off
+export TASMIYAH_FONT=nerd        # for the whole session
+```
+
+### The logo doesn't appear in a narrow pane
+
+The `centered` style needs at least 65 columns to draw the BISMILLAH logo.
+Narrower terminals fall back to centered text without the logo. Either widen
+the pane or pass `--style minimal` to remove all decoration.
 
 ### The box borders are misaligned
 
