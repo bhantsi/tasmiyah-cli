@@ -105,6 +105,14 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
 
+          # macOS Intel — cross-compiled from the Apple Silicon runner.
+          # GitHub no longer offers free Intel-Mac runners, but the Rust
+          # toolchain ships the x86_64-apple-darwin target out of the box
+          # and `taiki-e/upload-rust-binary-action` handles the
+          # cross-compile transparently.
+          - target: x86_64-apple-darwin
+            os: macos-latest
+
           # Windows
           - target: x86_64-pc-windows-msvc
             os: windows-latest
@@ -304,6 +312,7 @@ jobs:
           sha_linux_x86=$(fetch_sha x86_64-unknown-linux-musl)
           sha_linux_arm=$(fetch_sha aarch64-unknown-linux-musl)
           sha_macos_arm=$(fetch_sha aarch64-apple-darwin)
+          sha_macos_x86=$(fetch_sha x86_64-apple-darwin)
 
           mkdir -p tap/Formula
           # Render the formula from the template in this repo. The template
@@ -313,6 +322,7 @@ jobs:
             -e "s|{{SHA_LINUX_X86}}|${sha_linux_x86}|g" \
             -e "s|{{SHA_LINUX_ARM}}|${sha_linux_arm}|g" \
             -e "s|{{SHA_MACOS_ARM}}|${sha_macos_arm}|g" \
+            -e "s|{{SHA_MACOS_X86}}|${sha_macos_x86}|g" \
             source/docs/homebrew/tasmiyah-cli.rb.tmpl \
             > tap/Formula/tasmiyah-cli.rb
 
