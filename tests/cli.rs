@@ -150,6 +150,10 @@ fn random_flag_prints_a_known_phrase() {
         "In shāʾ",
         "Astaghfirullāh",
         "Lā ilāha",
+        "Ḥasbunā",
+        "Lā ḥawla",
+        "Rabbanā",
+        "Allāhumma",
     ];
     assert!(
         known.iter().any(|k| stdout.contains(k)),

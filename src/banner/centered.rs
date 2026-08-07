@@ -23,7 +23,7 @@ use std::io::Write;
 use crossterm::style::Color;
 use unicode_width::UnicodeWidthStr;
 
-use super::art::{BISMILLAH_ANSI_SHADOW, BISMILLAH_WIDTH};
+use super::art::logo_for;
 use super::common::{paint, resolved_term_size};
 use crate::cli::Args;
 use crate::font::FontKind;
@@ -40,11 +40,16 @@ pub(super) fn render<W: Write>(
     args: &Args,
     theme: &Theme,
     font: FontKind,
+    phrase_index: usize,
     phrase: &Phrase,
     out: &mut W,
 ) -> std::io::Result<()> {
     let (cols, rows) = resolved_term_size();
-    let show_logo = cols >= BISMILLAH_WIDTH;
+    // Pick the logo for this phrase (the Basmala and several others have
+    // dedicated ANSI-Shadow art). Phrases without a logo, and terminals
+    // too narrow for the logo, both render text-only.
+    let logo = logo_for(phrase_index).filter(|l| cols >= l.width);
+    let show_logo = logo.is_some();
 
     // Extra width allowance for the Arabic line under Nerd Fonts.
     let arabic_slack = match font {
@@ -61,11 +66,7 @@ pub(super) fn render<W: Write>(
     }
 
     // Total vertical height of everything we're about to draw.
-    let logo_height = if show_logo {
-        BISMILLAH_ANSI_SHADOW.len()
-    } else {
-        0
-    };
+    let logo_height = logo.map_or(0, |l| l.rows.len());
     let gap = if show_logo { 1 } else { 0 };
     let banner_height = logo_height + gap + text_lines.len();
     let top_pad = rows.saturating_sub(banner_height) / 2;
@@ -78,9 +79,9 @@ pub(super) fn render<W: Write>(
     }
 
     // Logo rows.
-    if show_logo {
-        let left = horizontal_pad(cols, BISMILLAH_WIDTH);
-        for row in BISMILLAH_ANSI_SHADOW {
+    if let Some(logo) = logo {
+        let left = horizontal_pad(cols, logo.width);
+        for row in logo.rows {
             write_centered_row(out, row, theme.border, left, theme)?;
         }
         writeln!(out)?;

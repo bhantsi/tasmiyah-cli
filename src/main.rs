@@ -34,13 +34,13 @@ fn main() -> std::io::Result<()> {
     }
 
     let theme = theme::Theme::for_args(&args, preset, cfg.colors.as_ref());
-    let phrase = if args.random {
-        phrases::random()
+    let (phrase_index, phrase) = if args.random {
+        phrases::random_with_index()
     } else {
-        phrases::default()
+        phrases::default_with_index()
     };
     let color = theme.enabled;
-    banner::render(&args, &theme, font, phrase)?;
+    banner::render(&args, &theme, font, phrase_index, phrase)?;
     // Non-fatal, daily-cached check for a newer release on crates.io.
     // All gating (TTY, opt-out env vars, error swallowing) lives in
     // `update::notify` so `main` stays a straight pipeline.

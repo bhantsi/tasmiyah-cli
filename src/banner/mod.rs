@@ -74,12 +74,21 @@ mod common {
 }
 
 /// Render `phrase` to stdout using the style requested in `args`.
-pub fn render(args: &Args, theme: &Theme, font: FontKind, phrase: &Phrase) -> io::Result<()> {
+///
+/// `phrase_index` is the phrase's position in [`crate::phrases::PHRASES`];
+/// the centered style uses it to select the matching logo.
+pub fn render(
+    args: &Args,
+    theme: &Theme,
+    font: FontKind,
+    phrase_index: usize,
+    phrase: &Phrase,
+) -> io::Result<()> {
     let stdout = io::stdout().lock();
     let mut out = BufWriter::new(stdout);
     match args.style.unwrap_or(StyleKind::Centered) {
         StyleKind::Classic => classic::render(args, theme, font, phrase, &mut out)?,
-        StyleKind::Centered => centered::render(args, theme, font, phrase, &mut out)?,
+        StyleKind::Centered => centered::render(args, theme, font, phrase_index, phrase, &mut out)?,
         StyleKind::Minimal => minimal::render(args, theme, phrase, &mut out)?,
     }
     out.flush()

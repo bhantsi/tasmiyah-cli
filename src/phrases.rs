@@ -53,6 +53,26 @@ pub const PHRASES: &[Phrase] = &[
         translit: "Lā ilāha illā Allāh",
         english: "There is no god but Allah",
     },
+    Phrase {
+        arabic: "حَسْبُنَا ٱللَّٰهُ وَنِعْمَ ٱلْوَكِيلُ",
+        translit: "Ḥasbunā Allāhu wa niʿmal wakīl",
+        english: "Allah is sufficient for us, and He is the best Disposer of affairs",
+    },
+    Phrase {
+        arabic: "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِٱللَّٰهِ",
+        translit: "Lā ḥawla wa lā quwwata illā billāh",
+        english: "There is no might nor power except with Allah",
+    },
+    Phrase {
+        arabic: "رَبَّنَا آتِنَا فِي ٱلدُّنْيَا حَسَنَةً",
+        translit: "Rabbanā ātinā fi d-dunyā ḥasanah",
+        english: "Our Lord, give us in this world that which is good",
+    },
+    Phrase {
+        arabic: "ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ",
+        translit: "Allāhumma ṣalli ʿalā Muḥammad",
+        english: "O Allah, send blessings upon Muhammad",
+    },
 ];
 
 /// Pick a random index into `PHRASES`.
@@ -79,7 +99,7 @@ pub fn random_index() -> usize {
     (x as usize) % PHRASES.len()
 }
 
-/// The default phrase (the Basmala).
+/// The default phrase (the Basmala) and its index (0).
 pub fn default() -> &'static Phrase {
     &PHRASES[0]
 }
@@ -87,6 +107,19 @@ pub fn default() -> &'static Phrase {
 /// Pick a random phrase.
 pub fn random() -> &'static Phrase {
     &PHRASES[random_index()]
+}
+
+/// Pick a random phrase, returning both the phrase and its index into
+/// [`PHRASES`] (the centered renderer needs the index to pick the
+/// matching logo).
+pub fn random_with_index() -> (usize, &'static Phrase) {
+    let i = random_index();
+    (i, &PHRASES[i])
+}
+
+/// The default phrase (the Basmala) with its index (0).
+pub fn default_with_index() -> (usize, &'static Phrase) {
+    (0, &PHRASES[0])
 }
 
 #[cfg(test)]
