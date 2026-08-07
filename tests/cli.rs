@@ -280,10 +280,8 @@ fn style_env_var_selects_style() {
 #[test]
 fn style_flag_beats_env_var() {
     // CLI flag must win over TASMIYAH_STYLE.
-    let (stdout, _stderr, code) = run_with_env(
-        &["--style", "minimal"],
-        &[("TASMIYAH_STYLE", "classic")],
-    );
+    let (stdout, _stderr, code) =
+        run_with_env(&["--style", "minimal"], &[("TASMIYAH_STYLE", "classic")]);
     assert_eq!(code, 0);
     assert!(
         !stdout.contains('╔'),

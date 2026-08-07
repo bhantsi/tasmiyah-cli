@@ -146,7 +146,11 @@ mod tests {
     fn check(logo: &Logo) {
         for (i, row) in logo.rows.iter().enumerate() {
             let w = UnicodeWidthStr::width(*row);
-            assert_eq!(w, logo.width, "row {i} is {w} cols, expected {}", logo.width);
+            assert_eq!(
+                w, logo.width,
+                "row {i} is {w} cols, expected {}",
+                logo.width
+            );
         }
         assert_eq!(logo.rows.len(), 6, "logos are 6 rows tall");
     }

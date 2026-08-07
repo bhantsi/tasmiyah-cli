@@ -89,12 +89,7 @@ impl ThemePreset {
                 },
                 Color::White,
             ),
-            ThemePreset::Mono => (
-                Color::Reset,
-                Color::Reset,
-                Color::Reset,
-                Color::Reset,
-            ),
+            ThemePreset::Mono => (Color::Reset, Color::Reset, Color::Reset, Color::Reset),
         }
     }
 
@@ -168,11 +163,7 @@ impl Theme {
     /// Pick the right theme based on user flags + environment, using
     /// the given preset and overrides (already resolved by the caller
     /// with the CLI > env > config > default precedence).
-    pub fn for_args(
-        args: &Args,
-        preset: ThemePreset,
-        overrides: Option<&ColorOverrides>,
-    ) -> Self {
+    pub fn for_args(args: &Args, preset: ThemePreset, overrides: Option<&ColorOverrides>) -> Self {
         if should_use_color(args) {
             Self::themed(preset, overrides)
         } else {
@@ -281,11 +272,7 @@ mod tests {
     fn hex_colors_parse() {
         assert_eq!(
             parse_color("#ff0000"),
-            Some(Color::Rgb {
-                r: 255,
-                g: 0,
-                b: 0
-            })
+            Some(Color::Rgb { r: 255, g: 0, b: 0 })
         );
         assert_eq!(
             parse_color("00ff80"),
@@ -315,14 +302,7 @@ mod tests {
             english: None,
         };
         let t = Theme::themed(ThemePreset::Gold, Some(&overrides));
-        assert_eq!(
-            t.border,
-            Color::Rgb {
-                r: 255,
-                g: 0,
-                b: 0
-            }
-        );
+        assert_eq!(t.border, Color::Rgb { r: 255, g: 0, b: 0 });
         // Untouched slots keep the preset color.
         assert_eq!(t.arabic, Color::Green);
     }

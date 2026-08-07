@@ -91,7 +91,11 @@ pub(super) fn render<W: Write>(
     // The Arabic line gets the Nerd-Font slack so it stays visually
     // centered under the logo even when the terminal widens glyphs.
     for (text, color) in &text_lines {
-        let slack = if *color == theme.arabic { arabic_slack } else { 0 };
+        let slack = if *color == theme.arabic {
+            arabic_slack
+        } else {
+            0
+        };
         let w = UnicodeWidthStr::width(*text) + 2 * slack;
         let left = horizontal_pad(cols, w).saturating_sub(slack);
         write_centered_row(out, text, *color, left, theme)?;

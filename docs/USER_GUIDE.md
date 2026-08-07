@@ -14,8 +14,9 @@ the [README](../README.md).
 4. [Examples & Recipes](#-examples--recipes)
 5. [Shell Integration](#-shell-integration)
 6. [Environment Variables](#-environment-variables)
-7. [Phrase Library](#-phrase-library)
-8. [Troubleshooting](#-troubleshooting)
+7. [Configuration File](#️-configuration-file)
+8. [Phrase Library](#-phrase-library)
+9. [Troubleshooting](#-troubleshooting)
 9. [Upgrade](#-upgrade)
 10. [Uninstall](#-uninstall)
 11. [Getting Help](#-getting-help)
@@ -105,6 +106,32 @@ mkdir -p ~/.local/bin
 cp target/release/tasmiyah ~/.local/bin/
 ```
 
+### Shell completions & man page
+
+Each release archive bundles generated shell completions (bash, zsh,
+fish, PowerShell, Elvish) under `completions/` and a man page under
+`man/`. Homebrew installs them automatically; from a manual binary
+install you can copy them yourself:
+
+```bash
+# bash
+sudo install -m 644 completions/tasmiyah.bash /usr/share/bash-completion/completions/tasmiyah
+# zsh
+sudo install -m 644 completions/_tasmiyah /usr/share/zsh/site-functions/_tasmiyah
+# fish
+sudo install -m 644 completions/tasmiyah.fish /usr/share/fish/vendor_completions.d/tasmiyah.fish
+# man page
+sudo install -m 644 man/tasmiyah.1 /usr/local/share/man/man1/tasmiyah.1
+```
+
+To regenerate them from source (they're built with `clap_complete` /
+`clap_mangen`, gated behind a cargo feature so the shipped binary stays
+lean):
+
+```bash
+cargo run --features gen --bin gen   # writes to target/gen/
+```
+
 ---
 
 ## 🎛️ Command Reference
@@ -119,6 +146,7 @@ both a short (`-x`) and a long (`--xxx`) form.
 | `--random` | `-r` | Pick a random phrase from the [library](#-phrase-library) instead of the Basmala. |
 | `--style <STYLE>` | `-s` | Layout: `centered` *(default)*, `classic`, or `minimal`. See [Styles](#styles). |
 | `--font <FONT>` | `-f` | Arabic-width layout hint: `auto` *(default)*, `standard`, or `nerd`. See [Environment Variables](#-environment-variables). |
+| `--theme <THEME>` | — | Color palette: `gold` *(default)*, `ocean`, `rose`, or `mono`. See [Themes](#themes). |
 | `--help` | `-h` | Print the auto-generated help and exit. |
 | `--version` | `-V` | Print the version and exit. |
 
@@ -131,9 +159,25 @@ Flags compose freely. The two most common combinations:
 
 | Style | Description |
 |---|---|
-| `centered` *(default)* | Large `BISMILLAH` ASCII logo, vertically centered, with the phrase line(s) underneath. Falls back to centered text when the terminal is narrower than 65 columns. |
+| `centered` *(default)* | Large ASCII logo, vertically centered, with the phrase line(s) underneath. The logo matches the phrase (BISMILLAH for the default; ALHAMDULILLAH, SUBHANALLAH, etc. when `--random` picks one with art). Falls back to centered text when the terminal is narrower than the logo. |
 | `classic` | The v0.1 unicode-box layout: phrases inside a `╔═══…═══╗` frame. |
 | `minimal` | Plain text only — no logo, no frame, no padding. Ideal for shell prompts and scripts. |
+
+### Themes
+
+The active palette is chosen with `--theme`, falling back to
+`TASMIYAH_THEME`, then the [config file](#%EF%B8%8F-configuration-file),
+then `gold`.
+
+| Theme | Feel |
+|---|---|
+| `gold` *(default)* | Warm gold border, green Arabic — the original "manuscript" look. |
+| `ocean` | Teal/deep-blue border, cyan Arabic. |
+| `rose` | Soft rose/pink border, magenta Arabic. |
+| `mono` | No per-element colors — everything in the terminal's default foreground. |
+
+Individual colors can be overridden slot-by-slot in the config file's
+`[colors]` table (see [Configuration File](#%EF%B8%8F-configuration-file)).
 
 ### Exit codes
 
@@ -298,18 +342,52 @@ tasmiyah --random --translation
 | Variable | Effect |
 |----------|--------|
 | `NO_COLOR` | If set to **any** value (even empty), disables ANSI colors. Standardized at <https://no-color.org>. |
+| `TASMIYAH_STYLE` | Default style (`classic` / `centered` / `minimal`). Lower precedence than `--style`, higher than the config file. |
+| `TASMIYAH_THEME` | Default theme (`gold` / `ocean` / `rose` / `mono`). Lower precedence than `--theme`, higher than the config file. |
 | `TASMIYAH_FONT` | Override font detection. Set to `nerd` (or `nerd-font`) to force Nerd-Font layout, or `standard` to force the plain layout. Lower precedence than `--font`. |
+| `TASMIYAH_COLS` / `TASMIYAH_ROWS` | Override the detected terminal size (columns/rows). Mainly useful for tests, screenshots, and demos. |
 | `NO_UPDATE_NOTIFIER` | If set to **any** value, suppresses the "a new release is available" footer. See [Upgrade](#-upgrade). |
 | `CI` | If set (most CI systems set this automatically), also suppresses the update-check footer. |
 
 stdout TTY detection also disables colors automatically when output is
 redirected or piped, so you almost never need to set `NO_COLOR`
-manually.
+manually. `TERM=dumb` disables colors too.
 
 ```bash
 NO_COLOR=1 tasmiyah      # plain output for this one invocation
 export NO_COLOR=1        # plain output for the whole session
 ```
+
+---
+
+## ⚙️ Configuration File
+
+For preferences you want every session, `tasmiyah` reads an optional
+TOML config file instead of forcing flags into your shell rc:
+
+- **Linux:** `~/.config/tasmiyah/config.toml`
+- **macOS:** `~/Library/Application Support/tasmiyah/config.toml`
+- **Windows:** `%APPDATA%\tasmiyah\config.toml`
+
+Everything is optional; a missing or malformed file falls back to
+defaults (a malformed file also prints a one-line warning on stderr in
+interactive sessions).
+
+```toml
+style = "classic"          # classic | centered | minimal
+font = "nerd"              # standard | nerd | auto
+theme = "ocean"            # gold | ocean | rose | mono
+translation = true         # always show transliteration + English
+
+[colors]                   # per-element overrides, #RRGGBB or a name
+border = "#d4af37"
+arabic = "green"
+translit = "yellow"
+english = "white"
+```
+
+**Precedence** (highest first): CLI flag → env var → config file →
+built-in default.
 
 ---
 
@@ -328,8 +406,15 @@ set:
 | 6 | إِنْ شَاءَ ٱللَّٰهُ | In shāʾ Allāh | If Allah wills |
 | 7 | أَسْتَغْفِرُ ٱللَّٰهَ | Astaghfirullāh | I seek forgiveness from Allah |
 | 8 | لَا إِلَٰهَ إِلَّا ٱللَّٰهُ | Lā ilāha illā Allāh | There is no god but Allah |
+| 9 | حَسْبُنَا ٱللَّٰهُ وَنِعْمَ ٱلْوَكِيلُ | Ḥasbunā Allāhu wa niʿmal wakīl | Allah is sufficient for us, and He is the best Disposer of affairs |
+| 10 | لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِٱللَّٰهِ | Lā ḥawla wa lā quwwata illā billāh | There is no might nor power except with Allah |
+| 11 | رَبَّنَا آتِنَا فِي ٱلدُّنْيَا حَسَنَةً | Rabbanā ātinā fi d-dunyā ḥasanah | Our Lord, give us in this world that which is good |
+| 12 | ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ | Allāhumma ṣalli ʿalā Muḥammad | O Allah, send blessings upon Muhammad |
 
 Index 1 (the Basmala) is the default when no flags are passed.
+
+In the `centered` style, phrases 1–8 have a dedicated ASCII logo; the
+newer phrases (9–12) render as centered text only.
 
 ---
 
