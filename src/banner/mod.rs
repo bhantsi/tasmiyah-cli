@@ -56,15 +56,30 @@ mod common {
         let (c, r) = crossterm::terminal::size().unwrap_or((FALLBACK_COLS, FALLBACK_ROWS));
         (c as usize, r as usize)
     }
+
+    /// Terminal size, overridable via the `TASMIYAH_COLS` / `TASMIYAH_ROWS`
+    /// env vars (useful for tests, screenshots, and demos).
+    pub(super) fn resolved_term_size() -> (usize, usize) {
+        let (cols, rows) = term_size();
+        let cols = std::env::var("TASMIYAH_COLS")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(cols);
+        let rows = std::env::var("TASMIYAH_ROWS")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(rows);
+        (cols, rows)
+    }
 }
 
 /// Render `phrase` to stdout using the style requested in `args`.
 pub fn render(args: &Args, theme: &Theme, font: FontKind, phrase: &Phrase) -> io::Result<()> {
     let stdout = io::stdout().lock();
     let mut out = BufWriter::new(stdout);
-    match args.style {
+    match args.style.unwrap_or(StyleKind::Centered) {
         StyleKind::Classic => classic::render(args, theme, font, phrase, &mut out)?,
-        StyleKind::Centered => centered::render(args, theme, phrase, &mut out)?,
+        StyleKind::Centered => centered::render(args, theme, font, phrase, &mut out)?,
         StyleKind::Minimal => minimal::render(args, theme, phrase, &mut out)?,
     }
     out.flush()

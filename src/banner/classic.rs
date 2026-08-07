@@ -9,7 +9,7 @@ use std::io::Write;
 use crossterm::style::Color;
 use unicode_width::UnicodeWidthStr;
 
-use super::common::{paint, term_size};
+use super::common::{paint, resolved_term_size};
 use crate::cli::Args;
 use crate::font::FontKind;
 use crate::phrases::Phrase;
@@ -76,7 +76,7 @@ fn inner_width(lines: &[Line], font: FontKind) -> usize {
         .unwrap_or(0);
     let desired = max_text + 2 * H_PADDING;
 
-    let (cols, _) = term_size();
+    let (cols, _) = resolved_term_size();
     let cap = cols.saturating_sub(2).max(max_text); // never crush the text itself
     desired.min(cap)
 }

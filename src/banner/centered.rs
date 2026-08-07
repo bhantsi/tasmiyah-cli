@@ -24,19 +24,33 @@ use crossterm::style::Color;
 use unicode_width::UnicodeWidthStr;
 
 use super::art::{BISMILLAH_ANSI_SHADOW, BISMILLAH_WIDTH};
-use super::common::{paint, term_size};
+use super::common::{paint, resolved_term_size};
 use crate::cli::Args;
+use crate::font::FontKind;
 use crate::phrases::Phrase;
 use crate::theme::Theme;
+
+// Extra horizontal slack (per side) applied to Arabic text width when a
+// Nerd Font is detected — Nerd Fonts tend to draw Arabic glyphs slightly
+// wider than `unicode-width` reports, which would otherwise nudge the
+// centered line a column or two left of the logo's visual center.
+const NERD_FONT_SLACK: usize = 1;
 
 pub(super) fn render<W: Write>(
     args: &Args,
     theme: &Theme,
+    font: FontKind,
     phrase: &Phrase,
     out: &mut W,
 ) -> std::io::Result<()> {
-    let (cols, rows) = term_size();
+    let (cols, rows) = resolved_term_size();
     let show_logo = cols >= BISMILLAH_WIDTH;
+
+    // Extra width allowance for the Arabic line under Nerd Fonts.
+    let arabic_slack = match font {
+        FontKind::NerdFont => NERD_FONT_SLACK,
+        FontKind::Standard => 0,
+    };
 
     // Build the list of text lines that go *under* the logo.
     let mut text_lines: Vec<(&str, Color)> = Vec::with_capacity(3);
@@ -73,9 +87,12 @@ pub(super) fn render<W: Write>(
     }
 
     // Text rows, each individually centered (they have different widths).
+    // The Arabic line gets the Nerd-Font slack so it stays visually
+    // centered under the logo even when the terminal widens glyphs.
     for (text, color) in &text_lines {
-        let w = UnicodeWidthStr::width(*text);
-        let left = horizontal_pad(cols, w);
+        let slack = if *color == theme.arabic { arabic_slack } else { 0 };
+        let w = UnicodeWidthStr::width(*text) + 2 * slack;
+        let left = horizontal_pad(cols, w).saturating_sub(slack);
         write_centered_row(out, text, *color, left, theme)?;
     }
 
