@@ -16,6 +16,17 @@ categories = ["command-line-utilities"]
 name = "tasmiyah"
 path = "src/main.rs"
 
+# Artifact generator (shell completions + man page), built only with
+# `--features gen` so the shipped binary never links clap_complete /
+# clap_mangen. Run: `cargo run --features gen --bin gen`.
+[[bin]]
+name = "gen"
+path = "src/bin/gen.rs"
+required-features = ["gen"]
+
+[features]
+gen = ["dep:clap_complete", "dep:clap_mangen"]
+
 [dependencies]
 # CLI argument parsing — the de-facto standard
 clap = { version = "4.5", features = ["derive"] }
@@ -35,6 +46,11 @@ update-informer = "1"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 dirs = "5"
+
+# Build-time generators for shell completions and the man page, gated
+# behind the `gen` feature so the shipped binary never links them.
+clap_complete = { version = "4.5", optional = true }
+clap_mangen = { version = "0.2", optional = true }
 
 [profile.release]
 # Optimize for binary size + speed — important for a tool that runs at shell startup

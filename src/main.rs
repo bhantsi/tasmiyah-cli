@@ -5,17 +5,10 @@
 //! pick a phrase, render the banner.
 
 use clap::Parser;
+use tasmiyah_cli::{banner, config, font, phrases, theme, update};
 
-mod banner;
-mod cli;
-mod config;
-mod font;
-mod phrases;
-mod theme;
-mod update;
-
-use cli::{Args, FontArg, StyleKind};
-use theme::ThemePreset;
+use tasmiyah_cli::cli::{Args, FontArg, StyleKind};
+use tasmiyah_cli::theme::ThemePreset;
 
 fn main() -> std::io::Result<()> {
     let cfg = config::Config::load();
