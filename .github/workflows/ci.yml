@@ -49,6 +49,8 @@ jobs:
         shell: bash
         run: |
           # Ensure the binary runs end-to-end on every platform.
-          cargo run --quiet -- --no-color
-          cargo run --quiet -- --no-color --translation
-          cargo run --quiet -- --no-color --random
+          # --bin is required: the crate also ships the `gen` tooling
+          # binary, so bare `cargo run` is ambiguous.
+          cargo run --quiet --bin tasmiyah -- --no-color
+          cargo run --quiet --bin tasmiyah -- --no-color --translation
+          cargo run --quiet --bin tasmiyah -- --no-color --random

@@ -10,8 +10,10 @@ homepage = "https://github.com/bhantsi/tasmiyah-cli"
 readme = "README.md"
 keywords = ["cli", "islamic", "bismillah", "terminal", "greeting"]
 categories = ["command-line-utilities"]
+default-run = "tasmiyah"
 
-# The binary users will invoke from their shell
+# The binary users will invoke from their shell. `default-run` keeps a
+# bare `cargo run` working now that the crate also ships the `gen` bin.
 [[bin]]
 name = "tasmiyah"
 path = "src/main.rs"
