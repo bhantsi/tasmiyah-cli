@@ -213,7 +213,14 @@ fn parse_color(raw: &str) -> Option<Color> {
         "white" => Some(Color::White),
         "grey" | "gray" => Some(Color::Grey),
         "dark-grey" | "dark-gray" | "darkgrey" | "darkgray" => Some(Color::DarkGrey),
+        "bright-black" => Some(Color::DarkGrey),
         "bright-red" => Some(Color::Red),
+        "bright-green" => Some(Color::Green),
+        "bright-yellow" => Some(Color::Yellow),
+        "bright-blue" => Some(Color::Blue),
+        "bright-magenta" => Some(Color::Magenta),
+        "bright-cyan" => Some(Color::Cyan),
+        "bright-white" => Some(Color::White),
         _ => None,
     };
     if named.is_some() {

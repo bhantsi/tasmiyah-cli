@@ -19,7 +19,7 @@
 //! arabic = "bright-green"
 //! ```
 //!
-//! Precedence (handled in [`crate::main`]):
+//! Precedence (handled by the binary entry point):
 //! CLI flag > env var (`TASMIYAH_STYLE`, `TASMIYAH_FONT`,
 //! `TASMIYAH_THEME`) > config file > built-in default.
 
