@@ -27,9 +27,11 @@ time you open your terminal.
 
 - 🪶 **Fast** — single static binary, ~1–5 ms startup.
 - 🎨 **Three layouts** — centered ASCII logo (default), classic unicode box, or minimal text.
-- 🌍 **Eight phrases** — Basmala, Alhamdulillah, SubhanAllah, Allahu Akbar, and more.
+- 🌍 **Twelve phrases** — Basmala, Alhamdulillah, SubhanAllah, Allahu Akbar, and more, several with matching ASCII logos.
+- 🌈 **Themes** — gold, ocean, rose, or mono palettes, plus per-element custom colors.
+- ⚙️ **Config file** — set your style, theme, and colors once in `~/.config/tasmiyah/config.toml`.
 - 🧩 **Cross-platform** — Linux, macOS (Apple Silicon + Intel), and Windows.
-- 🚦 **Script-safe** — auto-detects pipes and disables colors; honors `NO_COLOR`.
+- 🚦 **Script-safe** — auto-detects pipes and disables colors; honors `NO_COLOR` and `TERM=dumb`.
 
 ---
 
@@ -83,8 +85,20 @@ tasmiyah --translation                # add transliteration + English
 tasmiyah --random                     # random phrase from the library
 tasmiyah --style classic              # the v0.1 unicode-box layout
 tasmiyah --style minimal              # plain text — ideal for shell prompts
+tasmiyah --theme ocean                # try a different palette
 tasmiyah --no-color                   # disable ANSI colors
 tasmiyah --help                       # show every flag
+```
+
+Make it yours with `~/.config/tasmiyah/config.toml`:
+
+```toml
+style = "centered"
+theme = "ocean"
+translation = true
+
+[colors]
+border = "#d4af37"
 ```
 
 Add one line to your shell rc to greet you on every new session:

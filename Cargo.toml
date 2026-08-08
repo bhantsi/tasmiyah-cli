@@ -1,8 +1,8 @@
 [package]
 name = "tasmiyah-cli"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
-authors = ["bhantsi"]
+authors = ["Hamza"]
 description = "A beautiful, fast terminal greeting that prints Bismillah and Islamic phrases"
 license = "MIT"
 repository = "https://github.com/bhantsi/tasmiyah-cli"
@@ -15,6 +15,17 @@ categories = ["command-line-utilities"]
 [[bin]]
 name = "tasmiyah"
 path = "src/main.rs"
+
+# Artifact generator (shell completions + man page), built only with
+# `--features gen` so the shipped binary never links clap_complete /
+# clap_mangen. Run: `cargo run --features gen --bin gen`.
+[[bin]]
+name = "gen"
+path = "src/bin/gen.rs"
+required-features = ["gen"]
+
+[features]
+gen = ["dep:clap_complete", "dep:clap_mangen"]
 
 [dependencies]
 # CLI argument parsing — the de-facto standard
@@ -30,6 +41,16 @@ unicode-width = "0.2"
 # when a new release ships. Pulled in with default features (`ureq`
 # blocking client, no `reqwest`/OpenSSL), runs once per 24h per user.
 update-informer = "1"
+
+# Config file support: ~/.config/tasmiyah/config.toml
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+dirs = "5"
+
+# Build-time generators for shell completions and the man page, gated
+# behind the `gen` feature so the shipped binary never links them.
+clap_complete = { version = "4.5", optional = true }
+clap_mangen = { version = "0.2", optional = true }
 
 [profile.release]
 # Optimize for binary size + speed — important for a tool that runs at shell startup

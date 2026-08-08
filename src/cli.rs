@@ -9,7 +9,8 @@ use clap::{Parser, ValueEnum};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    /// Disable ANSI colors (also honored: NO_COLOR env var, non-TTY stdout).
+    /// Disable ANSI colors (also honored: NO_COLOR env var, TERM=dumb,
+    /// non-TTY stdout).
     #[arg(short = 'n', long)]
     pub no_color: bool,
 
@@ -23,15 +24,23 @@ pub struct Args {
 
     /// Visual style. Default is a large BISMILLAH logo centered in the
     /// terminal; `classic` is the v0.1 unicode box; `minimal` strips
-    /// all decoration for shell prompts and scripting.
-    #[arg(short = 's', long, value_enum, default_value_t = StyleKind::Centered)]
-    pub style: StyleKind,
+    /// all decoration for shell prompts and scripting. Falls back to
+    /// `TASMIYAH_STYLE`, then the config file, then `centered`.
+    #[arg(short = 's', long, value_enum)]
+    pub style: Option<StyleKind>,
 
     /// Font world to assume when laying out Arabic glyphs. `auto`
-    /// (the default) reads `TASMIYAH_FONT` then sniffs prompt-framework
-    /// env vars (Starship, Powerlevel10k, Oh-My-Posh) to guess.
-    #[arg(short = 'f', long, value_enum, default_value_t = FontArg::Auto)]
-    pub font: FontArg,
+    /// reads `TASMIYAH_FONT` then sniffs prompt-framework env vars
+    /// (Starship, Powerlevel10k, Oh-My-Posh) to guess.
+    #[arg(short = 'f', long, value_enum)]
+    pub font: Option<FontArg>,
+
+    /// Color palette. `gold` is the original look; `ocean`, `rose` and
+    /// `mono` are built-in alternatives. Individual colors can be
+    /// overridden in the config file's `[colors]` table. Falls back to
+    /// `TASMIYAH_THEME`, then the config file, then `gold`.
+    #[arg(long, value_enum)]
+    pub theme: Option<crate::theme::ThemePreset>,
 }
 
 /// One of three banner layouts the renderer supports.

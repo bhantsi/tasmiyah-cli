@@ -150,6 +150,10 @@ fn random_flag_prints_a_known_phrase() {
         "In shāʾ",
         "Astaghfirullāh",
         "Lā ilāha",
+        "Ḥasbunā",
+        "Lā ḥawla",
+        "Rabbanā",
+        "Allāhumma",
     ];
     assert!(
         known.iter().any(|k| stdout.contains(k)),
@@ -196,4 +200,137 @@ fn font_flag_overrides_env() {
     );
     assert_eq!(code, 0);
     assert!(stdout.contains("بِسْمِ"));
+}
+
+#[test]
+fn narrow_terminal_falls_back_to_text_only() {
+    // TASMIYAH_COLS below the logo width (65) must drop the logo and
+    // still print the Arabic phrase — this is the phone/split-pane path.
+    let (stdout, _stderr, code) =
+        run_with_env(&["--style", "centered"], &[("TASMIYAH_COLS", "40")]);
+    assert_eq!(code, 0);
+    assert!(
+        !stdout.contains('█'),
+        "narrow terminal must skip the logo:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("بِسْمِ"),
+        "narrow terminal must still print the phrase:\n{stdout}"
+    );
+}
+
+#[test]
+fn wide_terminal_shows_logo() {
+    // Sanity check the override works in the other direction: an
+    // explicitly wide terminal keeps the logo.
+    let (stdout, _stderr, code) =
+        run_with_env(&["--style", "centered"], &[("TASMIYAH_COLS", "120")]);
+    assert_eq!(code, 0);
+    assert!(
+        stdout.contains('█'),
+        "wide terminal should include the logo:\n{stdout}"
+    );
+}
+
+#[test]
+fn term_dumb_disables_color() {
+    // TERM=dumb must force plain output even without --no-color.
+    // (The test harness sets NO_COLOR=1 by default; here we clear it by
+    // relying on TERM=dumb alone, then strip ANSI to double-check.)
+    let mut cmd = bin();
+    cmd.args(["--style", "minimal"])
+        .env("TERM", "dumb")
+        .env("NO_UPDATE_NOTIFIER", "1")
+        .env_remove("NO_COLOR");
+    let out = cmd.output().expect("failed to execute tasmiyah binary");
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    assert!(
+        !stdout.contains('\u{1b}'),
+        "TERM=dumb must suppress ANSI escapes:\n{:?}",
+        stdout
+    );
+}
+
+#[test]
+fn theme_flag_is_accepted() {
+    // Every built-in preset must be accepted by --theme.
+    for preset in ["gold", "ocean", "rose", "mono"] {
+        let (_stdout, _stderr, code) = run(&["--theme", preset, "--style", "minimal"]);
+        assert_eq!(code, 0, "--theme {preset} must exit 0");
+    }
+}
+
+#[test]
+fn unknown_theme_is_rejected() {
+    let (_stdout, _stderr, code) = run(&["--theme", "neon"]);
+    assert_ne!(code, 0, "unknown --theme value must fail");
+}
+
+#[test]
+fn style_env_var_selects_style() {
+    // TASMIYAH_STYLE=classic must produce the unicode box without any flag.
+    let (stdout, _stderr, code) = run_with_env(&[], &[("TASMIYAH_STYLE", "classic")]);
+    assert_eq!(code, 0);
+    assert!(
+        stdout.contains('╔'),
+        "TASMIYAH_STYLE=classic should render the box:\n{stdout}"
+    );
+}
+
+#[test]
+fn style_flag_beats_env_var() {
+    // CLI flag must win over TASMIYAH_STYLE.
+    let (stdout, _stderr, code) =
+        run_with_env(&["--style", "minimal"], &[("TASMIYAH_STYLE", "classic")]);
+    assert_eq!(code, 0);
+    assert!(
+        !stdout.contains('╔'),
+        "--style minimal must override TASMIYAH_STYLE=classic:\n{stdout}"
+    );
+}
+
+#[test]
+fn config_file_is_used_when_no_flag_or_env() {
+    // Point XDG_CONFIG_HOME at a temp dir with a config that selects
+    // the classic style; the binary should pick it up with no flags.
+    let dir = std::env::temp_dir().join(format!("tasmiyah-test-{}", std::process::id()));
+    let cfg_dir = dir.join("tasmiyah");
+    std::fs::create_dir_all(&cfg_dir).unwrap();
+    std::fs::write(cfg_dir.join("config.toml"), "style = \"classic\"\n").unwrap();
+
+    let mut cmd = bin();
+    cmd.env("NO_COLOR", "1")
+        .env("NO_UPDATE_NOTIFIER", "1")
+        .env("XDG_CONFIG_HOME", &dir)
+        // Make sure the env var doesn't mask the config.
+        .env_remove("TASMIYAH_STYLE");
+    let out = cmd.output().expect("failed to execute tasmiyah binary");
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(
+        stdout.contains('╔'),
+        "config file style=classic should render the box:\n{stdout}"
+    );
+}
+
+#[test]
+fn malformed_config_does_not_crash() {
+    let dir = std::env::temp_dir().join(format!("tasmiyah-bad-{}", std::process::id()));
+    let cfg_dir = dir.join("tasmiyah");
+    std::fs::create_dir_all(&cfg_dir).unwrap();
+    std::fs::write(cfg_dir.join("config.toml"), "style = [\n").unwrap();
+
+    let mut cmd = bin();
+    cmd.env("NO_COLOR", "1")
+        .env("NO_UPDATE_NOTIFIER", "1")
+        .env("XDG_CONFIG_HOME", &dir)
+        .env_remove("TASMIYAH_STYLE");
+    let out = cmd.output().expect("failed to execute tasmiyah binary");
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    let _ = std::fs::remove_dir_all(&dir);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(
+        stdout.contains("بِسْمِ"),
+        "malformed config must fall back to defaults:\n{stdout}"
+    );
 }

@@ -130,8 +130,23 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      # Upload the binary + checksum to the draft release. This action also
-      # cross-compiles for musl/aarch64 targets transparently.
+      # Generate shell completions + the man page (feature-gated so the
+      # shipped binary never links clap_complete/clap_mangen). These are
+      # native artifacts — completions/man pages are target-independent,
+      # so we generate them once per job with the host toolchain.
+      - name: Generate completions & man page
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run --features gen --bin gen
+          # Stage into the layout the archive should have.
+          mkdir -p dist/completions dist/man
+          cp target/gen/completions/* dist/completions/
+          cp target/gen/man/* dist/man/
+
+      # Upload the binary + completions + man page + checksum to the
+      # draft release. This action also cross-compiles for musl/aarch64
+      # targets transparently.
       - name: Build & upload archive
         uses: taiki-e/upload-rust-binary-action@v1
         with:
@@ -140,6 +155,8 @@ jobs:
           tar: unix # use .tar.gz on linux/macos
           zip: windows # use .zip on windows
           checksum: sha256
+          # Bundle the generated completions + man page in every archive.
+          include: dist/completions,dist/man
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: refs/tags/${{ needs.create-release.outputs.tag }}
 

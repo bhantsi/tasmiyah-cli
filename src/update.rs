@@ -142,8 +142,10 @@ mod tests {
 
     #[test]
     fn opt_out_env_disables_check() {
-        // SAFETY: tests are single-threaded for env mutation here; we
-        // restore the previous value at end.
+        // Note: this mutates process env, which is shared across test
+        // threads. `NO_UPDATE_NOTIFIER` is only read by `should_check`
+        // and only tested here, so no other test observes the mutation;
+        // still, restore the previous value to be polite.
         let prev = std::env::var_os("NO_UPDATE_NOTIFIER");
         std::env::set_var("NO_UPDATE_NOTIFIER", "1");
         assert!(!should_check());
