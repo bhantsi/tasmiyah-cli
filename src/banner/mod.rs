@@ -27,7 +27,7 @@ mod minimal;
 /// Common bits shared between styles.
 mod common {
     use crossterm::style::{Color, Stylize};
-    use std::io::Write;
+    use std::io::{IsTerminal, Write};
 
     use crate::theme::Theme;
 
@@ -70,6 +70,23 @@ mod common {
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(rows);
         (cols, rows)
+    }
+
+    /// Rows available for vertical centering: `TASMIYAH_ROWS` if it parses,
+    /// else the terminal height when stdout is a terminal, else `None`
+    /// (piped/redirected output gets no vertical padding).
+    pub(super) fn vertical_rows() -> Option<usize> {
+        if let Some(rows) = std::env::var("TASMIYAH_ROWS")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+        {
+            return Some(rows);
+        }
+        if std::io::stdout().is_terminal() {
+            Some(term_size().1)
+        } else {
+            None
+        }
     }
 }
 
