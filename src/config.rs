@@ -13,7 +13,7 @@
 //! style = "classic"          # classic | centered | minimal
 //! font = "nerd"              # standard | nerd | auto
 //! theme = "ocean"            # gold | ocean | rose | mono
-//! arabic = "auto"           # auto | native | shaped (see `--arabic`)
+//! arabic = "auto"            # auto | native | shaped (see `--arabic`)
 //! phrase = "alhamdulillah"   # index (0-11) or name; see `tasmiyah --list`
 //! translation = true
 //! vertical_center = false    # true (default) | false: no top padding in centered style

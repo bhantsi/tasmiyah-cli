@@ -481,9 +481,9 @@ Marks: `✓` fine, `!` a likely problem, `i` information only.
 - **Terminal** — whether your terminal is known to render Arabic right-to-left
   (BiDi). `i` means it could not be identified. For a terminal known to lack
   BiDi there are two variants: `✓ … has no BiDi; using shaped Arabic (override
-  with --arabic native)` when the effective `--arabic` mode shapes the text
-  for you, and `! … has no BiDi; Arabic may appear reversed; try --arabic
-  shaped` when it does not (for example `--arabic native`).
+  with --arabic native)` when the effective `--arabic` mode would shape the text
+  for you on a terminal (TTY), and `! … has no BiDi; Arabic may appear reversed; try --arabic
+  shaped` when it would not (for example `--arabic native`).
 - **Arabic font** — asks fontconfig (`fc-match`) which font serves the Arabic
   letters for `--font-family`. With `--font-family` a `!` means the letters
   are split across several fonts or served by a font not known to be

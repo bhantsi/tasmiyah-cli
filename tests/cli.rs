@@ -7,8 +7,24 @@
 
 use std::process::Command;
 
+/// The binary with ambient terminal-identifying variables scrubbed, so
+/// BiDi detection is hermetic however the tests are launched. Callers'
+/// later `.env(..)` calls still win.
 fn bin() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_tasmiyah"))
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_tasmiyah"));
+    for k in [
+        "VTE_VERSION",
+        "KONSOLE_VERSION",
+        "TERM_PROGRAM",
+        "KITTY_WINDOW_ID",
+        "ALACRITTY_WINDOW_ID",
+        "ALACRITTY_SOCKET",
+        "WT_SESSION",
+    ] {
+        cmd.env_remove(k);
+    }
+    cmd.env("TERM", "xterm-256color");
+    cmd
 }
 
 fn run(args: &[&str]) -> (String, String, i32) {
