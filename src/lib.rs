@@ -10,5 +10,6 @@ pub mod cli;
 pub mod config;
 pub mod font;
 pub mod phrases;
+pub mod terminal;
 pub mod theme;
 pub mod update;
