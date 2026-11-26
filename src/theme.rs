@@ -264,6 +264,7 @@ mod tests {
             style: Some(crate::cli::StyleKind::Centered),
             font: Some(crate::cli::FontArg::Auto),
             theme: None,
+            command: None,
         };
         let t = Theme::for_args(&args, ThemePreset::Gold, None);
         assert!(!t.enabled, "--no-color must disable styling");

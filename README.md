@@ -89,6 +89,7 @@ tasmiyah --style classic              # the v0.1 unicode-box layout
 tasmiyah --style minimal              # plain text — ideal for shell prompts
 tasmiyah --theme ocean                # try a different palette
 tasmiyah --no-color                   # disable ANSI colors
+tasmiyah doctor                       # diagnose Arabic rendering / shell startup
 tasmiyah --help                       # show every flag
 ```
 

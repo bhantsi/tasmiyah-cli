@@ -16,10 +16,11 @@ the [README](../README.md).
 6. [Environment Variables](#-environment-variables)
 7. [Configuration File](#️-configuration-file)
 8. [Phrase Library](#-phrase-library)
-9. [Troubleshooting](#-troubleshooting)
-9. [Upgrade](#-upgrade)
-10. [Uninstall](#-uninstall)
-11. [Getting Help](#-getting-help)
+9. [Diagnostics](#-diagnostics)
+10. [Troubleshooting](#-troubleshooting)
+11. [Upgrade](#-upgrade)
+12. [Uninstall](#-uninstall)
+13. [Getting Help](#-getting-help)
 
 ---
 
@@ -136,8 +137,9 @@ cargo run --features gen --bin gen   # writes to target/gen/
 
 ## 🎛️ Command Reference
 
-`tasmiyah` is a single command with a handful of flags. Every flag has
-both a short (`-x`) and a long (`--xxx`) form.
+`tasmiyah` is a single command with a handful of flags, plus one subcommand,
+`tasmiyah doctor [--font-family FAMILY]` (see [Diagnostics](#-diagnostics)).
+Every flag has both a short (`-x`) and a long (`--xxx`) form.
 
 | Flag | Short | Description |
 |------|-------|-------------|
@@ -150,6 +152,7 @@ both a short (`-x`) and a long (`--xxx`) form.
 | `--style <STYLE>` | `-s` | Layout: `centered` *(default)*, `classic`, or `minimal`. See [Styles](#styles). |
 | `--font <FONT>` | `-f` | Arabic-width layout hint: `auto` *(default)*, `standard`, or `nerd`. See [Environment Variables](#-environment-variables). |
 | `--theme <THEME>` | — | Color palette: `gold` *(default)*, `ocean`, `rose`, or `mono`. See [Themes](#themes). |
+| `doctor [--font-family FAMILY]` | — | Subcommand: diagnose Arabic rendering and shell-startup problems; prints no banner. See [Diagnostics](#-diagnostics). |
 | `--help` | `-h` | Print the auto-generated help and exit. |
 | `--version` | `-V` | Print the version and exit. |
 
@@ -456,7 +459,42 @@ newer phrases (8–11) render as centered text only.
 
 ---
 
+## 🩺 Diagnostics
+
+`tasmiyah doctor` checks the usual causes of broken Arabic and shell-startup
+problems. It prints four lines, never changes anything, and always exits 0.
+
+```console
+$ tasmiyah doctor --font-family "JetBrainsMono Nerd Font"
+✓ Locale: en_US.UTF-8 is UTF-8
+✓ Terminal: VTE renders Arabic right-to-left
+✓ Arabic font: checked "JetBrainsMono Nerd Font": served by Kawkab Mono
+i Shell startup: installed in ~/.cargo/bin, which some shells add to PATH only after rc files run; in rc files call "$HOME/.cargo/bin/tasmiyah"
+```
+
+Marks: `✓` fine, `!` a likely problem, `i` information only.
+
+- **Locale** — your `LC_ALL` / `LC_CTYPE` / `LANG` must name a UTF-8 locale.
+- **Terminal** — whether your terminal is known to render Arabic right-to-left
+  (BiDi). `i` means it could not be identified.
+- **Arabic font** — asks fontconfig (`fc-match`) which font serves the Arabic
+  letters for `--font-family`. With `--font-family` a `!` means the letters
+  are split across several fonts or served by a font not known to be
+  fixed-width Arabic, so they may not join; see
+  [the fontconfig recipe](#arabic-letters-look-disconnected-or-have-gaps).
+  Without `--font-family` it inspects the generic `monospace` alias and only
+  ever reports `i` (information), because that alias is not what your terminal
+  necessarily uses; pass your terminal's font for an exact check. This check
+  runs on Linux/BSD only; it is skipped on macOS and Windows, and wherever
+  `fc-match` is not installed.
+- **Shell startup** — where the binary is installed, with a tip when it lives
+  in `~/.cargo/bin` and your shell rc files may not find it.
+
+---
+
 ## 🛠️ Troubleshooting
+
+> Not sure what is wrong? Run `tasmiyah doctor` first; see [Diagnostics](#-diagnostics).
 
 ### The Arabic looks like boxes or question marks
 

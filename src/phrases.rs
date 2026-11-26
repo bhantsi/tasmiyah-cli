@@ -221,8 +221,34 @@ pub fn find(selector: &str) -> Result<usize, LookupError> {
     Err(LookupError::Unknown(selector.to_string()))
 }
 
+/// Sorted, deduplicated Arabic-block characters (U+0600..=U+06FF) used
+/// across all phrases. Used by `tasmiyah doctor` to probe font coverage.
+pub fn arabic_codepoints() -> Vec<char> {
+    let mut v: Vec<char> = PHRASES
+        .iter()
+        .flat_map(|p| p.arabic.chars())
+        .filter(|c| ('\u{0600}'..='\u{06FF}').contains(c))
+        .collect();
+    v.sort_unstable();
+    v.dedup();
+    v
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn arabic_codepoints_cover_basmala() {
+        let cps = arabic_codepoints();
+        assert!(cps.contains(&'ب'));
+        assert!(cps.contains(&'ٱ'));
+        assert!(cps.contains(&'\u{0670}'));
+        assert!(cps.iter().all(|c| !c.is_ascii()));
+        let mut sorted = cps.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(cps, sorted);
+    }
+
     use super::*;
 
     #[test]

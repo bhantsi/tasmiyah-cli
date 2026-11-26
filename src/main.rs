@@ -9,7 +9,7 @@ use std::io::{self, Write};
 use clap::Parser;
 use tasmiyah_cli::{banner, config, font, phrases, theme, update};
 
-use tasmiyah_cli::cli::{Args, FontArg, StyleKind};
+use tasmiyah_cli::cli::{Args, Command, FontArg, StyleKind};
 use tasmiyah_cli::phrases::{LookupError, Phrase};
 use tasmiyah_cli::theme::ThemePreset;
 
@@ -51,6 +51,19 @@ fn main() -> io::Result<()> {
     }
 
     let theme = theme::Theme::for_args(&args, preset, cfg.colors.as_ref());
+
+    // `doctor` prints diagnostics only: no banner, no update notice.
+    if let Some(Command::Doctor { font_family }) = &args.command {
+        return match tasmiyah_cli::doctor::run(
+            font_family.as_deref(),
+            &theme,
+            &mut io::stdout().lock(),
+        ) {
+            Err(e) if e.kind() == io::ErrorKind::BrokenPipe => Ok(()),
+            r => r,
+        };
+    }
+
     let (phrase_index, phrase) = match resolve_phrase(&args, &cfg) {
         Ok(found) => found,
         Err(e) => {
