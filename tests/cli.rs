@@ -552,6 +552,7 @@ fn doctor_runs_and_prints_all_sections() {
     for t in ["Locale:", "Terminal:", "Arabic font:", "Shell startup:"] {
         assert!(out.contains(t), "{t} missing:\n{out}");
     }
+    assert!(!out.contains('\x1b'));
 }
 
 #[cfg(unix)]
@@ -562,7 +563,10 @@ fn doctor_without_fontconfig_still_succeeds() {
     let (out, _e, code) = run_with_env(&["doctor"], &[("PATH", empty.to_str().unwrap())]);
     let _ = std::fs::remove_dir_all(&empty);
     assert_eq!(code, 0);
-    assert!(out.contains("fontconfig not found"), "{out}");
+    assert!(
+        out.contains("fontconfig unavailable; font check skipped"),
+        "{out}"
+    );
 }
 
 #[test]

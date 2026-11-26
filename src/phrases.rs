@@ -222,7 +222,7 @@ pub fn find(selector: &str) -> Result<usize, LookupError> {
 }
 
 /// Sorted, deduplicated Arabic-block characters (U+0600..=U+06FF) used
-/// across all phrases. Used by `--doctor` to probe font coverage.
+/// across all phrases. Used by `tasmiyah doctor` to probe font coverage.
 pub fn arabic_codepoints() -> Vec<char> {
     let mut v: Vec<char> = PHRASES
         .iter()

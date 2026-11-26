@@ -1,7 +1,8 @@
 //! Pure diagnostic checks for `tasmiyah doctor`.
 //!
-//! Every function here is side-effect free: environment, fontconfig
-//! results and paths are injected by the caller.
+//! The `check_*` functions are pure: environment, fontconfig results and
+//! paths are injected by the caller. `query_fontconfig` and `run` touch the
+//! real environment (spawning `fc-match`, reading env vars, printing).
 
 use crate::terminal::{self, Bidi};
 use crate::theme::Theme;
@@ -78,47 +79,55 @@ pub fn check_terminal(bidi: Bidi) -> Check {
     }
 }
 
-pub fn check_fonts(family: &str, served: Option<&[(char, String)]>) -> Check {
+/// `explicit` is true when the user passed `--font-family`; otherwise the
+/// generic `monospace` alias is queried and the result is informational only.
+pub fn check_fonts(family: &str, explicit: bool, served: Option<&[(char, String)]>) -> Check {
     let Some(served) = served else {
         return check(
             Status::Info,
             "Arabic font",
-            "fontconfig not found; font check skipped",
+            "fontconfig unavailable; font check skipped",
         );
     };
-    let mut head = format!("checked \"{family}\"");
-    if family == "monospace" {
-        head.push_str(" (pass --font-family \"<your terminal font>\" for an exact check)");
-    }
+    let head = if explicit {
+        format!("checked \"{family}\"")
+    } else {
+        format!("default \"{family}\"")
+    };
     let mut fams: Vec<&str> = served.iter().map(|(_, f)| f.as_str()).collect();
     fams.sort_unstable();
     fams.dedup();
-    if fams.len() > 1 {
-        return check(
-            Status::Warn,
-            "Arabic font",
-            format!(
-                "{head}: split across {} fonts: {} — letters won't join; {FONT_RECIPE}",
-                fams.len(),
-                fams.join(", ")
-            ),
-        );
-    }
-    match fams.first() {
-        Some(f) if FIXED_WIDTH_ARABIC.contains(f) => {
-            check(Status::Ok, "Arabic font", format!("{head}: served by {f}"))
+    let (status, found) = match fams.as_slice() {
+        [] => (Status::Info, "no font information returned".to_string()),
+        [f] if FIXED_WIDTH_ARABIC.contains(f) || f.eq_ignore_ascii_case(family) => {
+            (Status::Ok, format!("served by {f}"))
         }
-        Some(f) => check(
+        [f] => (
             Status::Warn,
-            "Arabic font",
-            format!("{head}: {f} is proportional; letters may show gaps; {FONT_RECIPE}"),
+            format!(
+                "{f} is not a known fixed-width Arabic font; letters may show gaps; {FONT_RECIPE}"
+            ),
         ),
-        None => check(
-            Status::Info,
-            "Arabic font",
-            format!("{head}: no font information returned"),
+        many => (
+            Status::Warn,
+            format!(
+                "split across {} fonts: {} — letters won't join; {FONT_RECIPE}",
+                many.len(),
+                many.join(", ")
+            ),
         ),
+    };
+    if explicit {
+        return check(status, "Arabic font", format!("{head}: {found}"));
     }
+    let found = found.split("; see ").next().unwrap_or(&found).to_string();
+    check(
+        Status::Info,
+        "Arabic font",
+        format!(
+            "{head}: {found}; pass --font-family \"<your terminal font>\" to check the font your terminal actually uses"
+        ),
+    )
 }
 
 pub fn check_install_path(exe: &Path, home: Option<&Path>) -> Check {
@@ -139,13 +148,28 @@ pub fn check_install_path(exe: &Path, home: Option<&Path>) -> Check {
     }
 }
 
+/// Escape fontconfig pattern metacharacters in a family name.
+#[cfg_attr(not(all(unix, not(target_os = "macos"))), allow(dead_code))]
+fn escape_family(family: &str) -> String {
+    let mut out = String::with_capacity(family.len());
+    for c in family.chars() {
+        if matches!(c, '\\' | '-' | ':' | ',') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
 /// Ask fontconfig which family serves each character of `family`.
 ///
-/// Returns `None` when `fc-match` cannot be spawned (not installed, or a
-/// non-unix platform) or when no character produced a family name.
-#[cfg(unix)]
+/// Returns `None` when `fc-match` cannot be spawned (not installed) or when
+/// no character produced a family name. Only runs on Linux/BSD: macOS
+/// terminals do not use fontconfig, so there the check is skipped.
+#[cfg(all(unix, not(target_os = "macos")))]
 pub fn query_fontconfig(family: &str, chars: &[char]) -> Option<Vec<(char, String)>> {
     use std::process::{Command, Stdio};
+    let family = escape_family(family);
     let mut served = Vec::new();
     for &c in chars {
         let pattern = format!("{family}:charset={:x}", c as u32);
@@ -173,20 +197,22 @@ pub fn query_fontconfig(family: &str, chars: &[char]) -> Option<Vec<(char, Strin
     }
 }
 
-#[cfg(not(unix))]
+#[cfg(not(all(unix, not(target_os = "macos"))))]
 pub fn query_fontconfig(_family: &str, _chars: &[char]) -> Option<Vec<(char, String)>> {
     None
 }
 
 /// Run every check against the real environment and print the results.
-pub fn run<W: Write>(font_family: &str, theme: &Theme, out: &mut W) -> io::Result<()> {
+pub fn run<W: Write>(font_family: Option<&str>, theme: &Theme, out: &mut W) -> io::Result<()> {
     let env = |k: &str| std::env::var(k).ok();
-    let served = query_fontconfig(font_family, &crate::phrases::arabic_codepoints());
+    let explicit = font_family.is_some();
+    let family = font_family.unwrap_or("monospace");
+    let served = query_fontconfig(family, &crate::phrases::arabic_codepoints());
     let home = dirs::home_dir();
     let checks = [
         check_locale(&env),
         check_terminal(terminal::detect(&env)),
-        check_fonts(font_family, served.as_deref()),
+        check_fonts(family, explicit, served.as_deref()),
         match std::env::current_exe() {
             Ok(exe) => check_install_path(&exe, home.as_deref()),
             Err(_) => check(
@@ -266,11 +292,11 @@ mod tests {
 
     #[test]
     fn fonts_none_is_info() {
-        let c = check_fonts("monospace", None);
+        let c = check_fonts("monospace", false, None);
         assert_eq!(c.status, Status::Info);
         assert!(c
             .detail
-            .contains("fontconfig not found; font check skipped"));
+            .contains("fontconfig unavailable; font check skipped"));
     }
 
     #[test]
@@ -279,10 +305,23 @@ mod tests {
             ('ب', "DejaVu Sans".to_string()),
             ('ٱ', "Noto Sans Arabic".to_string()),
         ];
-        let c = check_fonts("Foo", Some(&served));
+        let c = check_fonts("Foo", true, Some(&served));
         assert_eq!(c.status, Status::Warn);
         assert!(c.detail.contains("split across 2 fonts"));
         assert!(c.detail.contains("60-tasmiyah-arabic.conf"));
+    }
+
+    #[test]
+    fn default_family_split_is_info() {
+        let served = [
+            ('ب', "DejaVu Sans".to_string()),
+            ('ٱ', "Noto Sans Arabic".to_string()),
+        ];
+        let c = check_fonts("monospace", false, Some(&served));
+        assert_eq!(c.status, Status::Info);
+        assert!(c.detail.starts_with("default \"monospace\""));
+        assert!(c.detail.contains("split across 2 fonts"));
+        assert!(c.detail.contains("--font-family"));
     }
 
     #[test]
@@ -291,30 +330,40 @@ mod tests {
             ('ب', "Kawkab Mono".to_string()),
             ('ٱ', "Kawkab Mono".to_string()),
         ];
-        let c = check_fonts("Kawkab Mono", Some(&served));
+        let c = check_fonts("Kawkab Mono", true, Some(&served));
         assert_eq!(c.status, Status::Ok);
         assert!(c.detail.starts_with("checked \"Kawkab Mono\""));
     }
 
     #[test]
-    fn single_proportional_font_warns() {
+    fn own_font_covering_arabic_is_ok() {
+        let served = [
+            ('ب', "DejaVu Sans Mono".to_string()),
+            ('ٱ', "DejaVu Sans Mono".to_string()),
+        ];
+        let c = check_fonts("DejaVu Sans Mono", true, Some(&served));
+        assert_eq!(c.status, Status::Ok);
+    }
+
+    #[test]
+    fn single_unknown_font_warns() {
         let served = [
             ('ب', "Noto Sans Arabic".to_string()),
             ('ٱ', "Noto Sans Arabic".to_string()),
         ];
-        let c = check_fonts("Foo", Some(&served));
+        let c = check_fonts("Foo", true, Some(&served));
         assert_eq!(c.status, Status::Warn);
-        assert!(c.detail.contains("Noto Sans Arabic is proportional"));
+        assert!(c
+            .detail
+            .contains("Noto Sans Arabic is not a known fixed-width Arabic font"));
         assert!(c.detail.contains("60-tasmiyah-arabic.conf"));
     }
 
     #[test]
-    fn monospace_family_adds_hint() {
-        let served = [('ب', "Thabit".to_string())];
-        let c = check_fonts("monospace", Some(&served));
-        assert!(c.detail.contains("--font-family \"<your terminal font>\""));
-        let c2 = check_fonts("Thabit", Some(&served));
-        assert!(!c2.detail.contains("<your terminal font>"));
+    fn escape_family_escapes_metacharacters() {
+        assert_eq!(escape_family("Foo-12"), "Foo\\-12");
+        assert_eq!(escape_family("a:b,c\\d"), "a\\:b\\,c\\\\d");
+        assert_eq!(escape_family("Plain Font"), "Plain Font");
     }
 
     #[test]

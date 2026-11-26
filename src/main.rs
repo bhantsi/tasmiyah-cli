@@ -54,7 +54,11 @@ fn main() -> io::Result<()> {
 
     // `doctor` prints diagnostics only: no banner, no update notice.
     if let Some(Command::Doctor { font_family }) = &args.command {
-        return match tasmiyah_cli::doctor::run(font_family, &theme, &mut io::stdout().lock()) {
+        return match tasmiyah_cli::doctor::run(
+            font_family.as_deref(),
+            &theme,
+            &mut io::stdout().lock(),
+        ) {
             Err(e) if e.kind() == io::ErrorKind::BrokenPipe => Ok(()),
             r => r,
         };

@@ -72,8 +72,8 @@ pub enum Command {
     Doctor {
         /// Font family to check (your terminal's font), e.g.
         /// "JetBrainsMono Nerd Font".
-        #[arg(long, value_name = "FAMILY", default_value = "monospace")]
-        font_family: String,
+        #[arg(long, value_name = "FAMILY")]
+        font_family: Option<String>,
     },
 }
 
