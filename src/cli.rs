@@ -3,7 +3,7 @@
 //! Uses `clap`'s derive API so `--help` and `--version` come for free,
 //! pulled straight from `Cargo.toml` metadata.
 
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 
 /// A beautiful, fast terminal greeting that prints Bismillah and Islamic phrases.
 #[derive(Parser, Debug)]
@@ -60,6 +60,21 @@ pub struct Args {
     /// `TASMIYAH_THEME`, then the config file, then `gold`.
     #[arg(long, value_enum)]
     pub theme: Option<crate::theme::ThemePreset>,
+
+    #[command(subcommand)]
+    pub command: Option<Command>,
+}
+
+/// Optional subcommands. With none, the greeting banner is printed.
+#[derive(Subcommand, Debug)]
+pub enum Command {
+    /// Diagnose Arabic rendering and shell-startup problems.
+    Doctor {
+        /// Font family to check (your terminal's font), e.g.
+        /// "JetBrainsMono Nerd Font".
+        #[arg(long, value_name = "FAMILY", default_value = "monospace")]
+        font_family: String,
+    },
 }
 
 /// One of three banner layouts the renderer supports.

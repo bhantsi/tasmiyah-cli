@@ -16,7 +16,8 @@ the [README](../README.md).
 6. [Environment Variables](#-environment-variables)
 7. [Configuration File](#️-configuration-file)
 8. [Phrase Library](#-phrase-library)
-9. [Troubleshooting](#-troubleshooting)
+9. [Diagnostics](#-diagnostics)
+10. [Troubleshooting](#-troubleshooting)
 9. [Upgrade](#-upgrade)
 10. [Uninstall](#-uninstall)
 11. [Getting Help](#-getting-help)
@@ -456,7 +457,38 @@ newer phrases (8–11) render as centered text only.
 
 ---
 
+## 🩺 Diagnostics
+
+`tasmiyah doctor` checks the usual causes of broken Arabic and shell-startup
+problems. It prints four lines, never changes anything, and always exits 0.
+
+```console
+$ tasmiyah doctor --font-family "JetBrainsMono Nerd Font"
+✓ Locale: en_US.UTF-8 is UTF-8
+✓ Terminal: kitty renders Arabic right-to-left
+✓ Arabic font: checked "JetBrainsMono Nerd Font": served by Kawkab Mono
+i Shell startup: installed in ~/.cargo/bin, which some shells add to PATH only after rc files run; in rc files call "$HOME/.cargo/bin/tasmiyah"
+```
+
+Marks: `✓` fine, `!` a likely problem, `i` information only.
+
+- **Locale** — your `LC_ALL` / `LC_CTYPE` / `LANG` must name a UTF-8 locale.
+- **Terminal** — whether your terminal is known to render Arabic right-to-left
+  (BiDi). `i` means it could not be identified.
+- **Arabic font** — asks fontconfig (`fc-match`) which font serves the Arabic
+  letters for `--font-family` (default `monospace`; pass your terminal's font
+  for an exact check). A `!` means the letters are split across several fonts
+  or served by a proportional font, so they won't join; see
+  [the fontconfig recipe](#arabic-letters-look-disconnected-or-have-gaps).
+  Without fontconfig (macOS, Windows) this check is skipped.
+- **Shell startup** — where the binary is installed, with a tip when it lives
+  in `~/.cargo/bin` and your shell rc files may not find it.
+
+---
+
 ## 🛠️ Troubleshooting
+
+> Not sure what is wrong? Run `tasmiyah doctor` first; see [Diagnostics](#-diagnostics).
 
 ### The Arabic looks like boxes or question marks
 

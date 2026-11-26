@@ -544,3 +544,29 @@ fn invalid_config_phrase_is_ignored() {
     assert!(out.contains("بِسْمِ"));
     assert!(err.is_empty(), "{err}");
 }
+
+#[test]
+fn doctor_runs_and_prints_all_sections() {
+    let (out, _e, code) = run(&["doctor"]);
+    assert_eq!(code, 0);
+    for t in ["Locale:", "Terminal:", "Arabic font:", "Shell startup:"] {
+        assert!(out.contains(t), "{t} missing:\n{out}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn doctor_without_fontconfig_still_succeeds() {
+    let empty = std::env::temp_dir().join(format!("tasmiyah-nopath-{}", std::process::id()));
+    std::fs::create_dir_all(&empty).unwrap();
+    let (out, _e, code) = run_with_env(&["doctor"], &[("PATH", empty.to_str().unwrap())]);
+    let _ = std::fs::remove_dir_all(&empty);
+    assert_eq!(code, 0);
+    assert!(out.contains("fontconfig not found"), "{out}");
+}
+
+#[test]
+fn plain_invocation_still_prints_banner() {
+    let (out, _e, _c) = run(&["--style", "minimal"]);
+    assert!(out.contains("بِسْمِ"));
+}

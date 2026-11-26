@@ -3,7 +3,10 @@
 //! Every function here is side-effect free: environment, fontconfig
 //! results and paths are injected by the caller.
 
-use crate::terminal::Bidi;
+use crate::terminal::{self, Bidi};
+use crate::theme::Theme;
+use crossterm::style::Stylize;
+use std::io::{self, Write};
 use std::path::Path;
 
 const FONT_RECIPE: &str = "see docs/fontconfig/60-tasmiyah-arabic.conf and https://github.com/bhantsi/tasmiyah-cli/blob/main/docs/USER_GUIDE.md#arabic-letters-look-disconnected-or-have-gaps";
@@ -134,6 +137,78 @@ pub fn check_install_path(exe: &Path, home: Option<&Path>) -> Check {
             format!("installed at {}", exe.display()),
         )
     }
+}
+
+/// Ask fontconfig which family serves each character of `family`.
+///
+/// Returns `None` when `fc-match` cannot be spawned (not installed, or a
+/// non-unix platform) or when no character produced a family name.
+#[cfg(unix)]
+pub fn query_fontconfig(family: &str, chars: &[char]) -> Option<Vec<(char, String)>> {
+    use std::process::{Command, Stdio};
+    let mut served = Vec::new();
+    for &c in chars {
+        let pattern = format!("{family}:charset={:x}", c as u32);
+        let out = Command::new("fc-match")
+            .args(["-f", "%{family[0]}", &pattern])
+            .stdin(Stdio::null())
+            .stderr(Stdio::null())
+            .output();
+        let out = match out {
+            Ok(o) => o,
+            Err(_) => return None,
+        };
+        if !out.status.success() {
+            continue;
+        }
+        let name = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if !name.is_empty() {
+            served.push((c, name));
+        }
+    }
+    if served.is_empty() {
+        None
+    } else {
+        Some(served)
+    }
+}
+
+#[cfg(not(unix))]
+pub fn query_fontconfig(_family: &str, _chars: &[char]) -> Option<Vec<(char, String)>> {
+    None
+}
+
+/// Run every check against the real environment and print the results.
+pub fn run<W: Write>(font_family: &str, theme: &Theme, out: &mut W) -> io::Result<()> {
+    let env = |k: &str| std::env::var(k).ok();
+    let served = query_fontconfig(font_family, &crate::phrases::arabic_codepoints());
+    let home = dirs::home_dir();
+    let checks = [
+        check_locale(&env),
+        check_terminal(terminal::detect(&env)),
+        check_fonts(font_family, served.as_deref()),
+        match std::env::current_exe() {
+            Ok(exe) => check_install_path(&exe, home.as_deref()),
+            Err(_) => check(
+                Status::Info,
+                "Shell startup",
+                "could not determine the executable path",
+            ),
+        },
+    ];
+    for c in &checks {
+        let (mark, color) = match c.status {
+            Status::Ok => ("✓", Some(crossterm::style::Color::Green)),
+            Status::Warn => ("!", Some(crossterm::style::Color::Yellow)),
+            Status::Info => ("i", None),
+        };
+        match color {
+            Some(col) if theme.enabled => write!(out, "{}", mark.with(col))?,
+            _ => write!(out, "{mark}")?,
+        }
+        writeln!(out, " {}: {}", c.title, c.detail)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
