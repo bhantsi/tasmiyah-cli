@@ -251,6 +251,11 @@ tasmiyah --no-color > bismillah.txt
 tasmiyah --translation | sudo tee /etc/motd
 ```
 
+> 💡 When stdout is not a terminal (pipes, files, `/etc/motd`), the
+> `centered` style skips the vertical top/bottom padding unless
+> `TASMIYAH_ROWS` is set. For just the text with no decoration at all,
+> add `--style minimal`.
+
 ### Show a different phrase on every new tmux pane
 
 ```tmux
@@ -274,22 +279,31 @@ Run `tasmiyah` automatically every time you open a new shell session.
 
 The `command -v` / `Get-Command` / `type -q` / `which` guard means:
 *if `tasmiyah` isn't installed, fail silently* instead of printing a
-confusing "command not found" on every login.
+confusing "command not found" on every login. (The bash/zsh snippets
+also check `~/.cargo/bin/tasmiyah` directly first; see the note in those
+sections.)
 
 ### Bash
 
 Add to `~/.bashrc`:
 
 ```bash
-command -v tasmiyah >/dev/null 2>&1 && tasmiyah
+if [ -x "$HOME/.cargo/bin/tasmiyah" ]; then "$HOME/.cargo/bin/tasmiyah"
+elif command -v tasmiyah >/dev/null 2>&1; then tasmiyah; fi
 ```
+
+> 💡 Why not just `command -v tasmiyah`? `~/.cargo/env` (which adds
+> `~/.cargo/bin` to `PATH`) is often sourced *later* in the rc file, so
+> `command -v` fails when the line sits near the top (e.g. above the p10k
+> block). Checking `~/.cargo/bin/tasmiyah` directly avoids that.
 
 ### Zsh
 
 Add to `~/.zshrc`:
 
 ```bash
-command -v tasmiyah >/dev/null 2>&1 && tasmiyah
+if [ -x "$HOME/.cargo/bin/tasmiyah" ]; then "$HOME/.cargo/bin/tasmiyah"
+elif command -v tasmiyah >/dev/null 2>&1; then tasmiyah; fi
 ```
 
 > ⚡ **Using Powerlevel10k?** Put the line **above** the p10k
@@ -432,6 +446,75 @@ does:
 - Windows Terminal: install *Noto Sans Arabic* and set it as the
   profile's `fontFace`.
 
+Noto Sans Arabic fixes *coverage* (no more boxes). If the letters show
+up but look disconnected, see
+[Arabic letters look disconnected or have gaps](#arabic-letters-look-disconnected-or-have-gaps).
+
+### Arabic letters look disconnected or have gaps
+
+Two things commonly cause this on Linux terminals:
+
+1. **Per-glyph font fallback splits one word across several fonts.**
+   Fontconfig may pick one font for most letters and another for a
+   few (for example the alef wasla `ٱ` in the Basmala), which breaks the
+   joins. Check which font each character resolves to:
+
+   ```bash
+   fc-match "<Your Font>:charset=0628" family   # ب
+   fc-match "<Your Font>:charset=0671" family   # ٱ
+   ```
+
+   If the two answers differ, the word is being split.
+2. **Terminals draw every glyph in a fixed-width cell.** Proportional
+   Arabic fonts (Noto Sans Arabic, Amiri, DejaVu Sans) don't reach the
+   cell edges, leaving visible gaps between letters.
+
+**Fix:** use fixed-width Arabic fonts as the fallback chain.
+
+1. Install **Kawkab Mono** (OFL licensed, no sudo needed):
+
+   ```bash
+   mkdir -p ~/.local/share/fonts/kawkab-mono
+   curl -L -o /tmp/kawkab-mono.zip https://github.com/aiaf/kawkab-mono/releases/download/v0.501/kawkab-mono-0.501.zip
+   unzip -o /tmp/kawkab-mono.zip -d ~/.local/share/fonts/kawkab-mono/
+   rm /tmp/kawkab-mono.zip
+   fc-cache -f
+   ```
+
+2. Install **Thabit** (covers the isolated forms Kawkab Mono lacks):
+
+   ```bash
+   sudo apt install fonts-hosny-thabit     # Debian / Ubuntu
+   ```
+
+3. Copy [`docs/fontconfig/60-tasmiyah-arabic.conf`](fontconfig/60-tasmiyah-arabic.conf)
+   to `~/.config/fontconfig/conf.d/` and replace `JetBrainsMono Nerd Font`
+   in it with your terminal's exact font family. Find the exact name with
+   `fc-list : family | grep -i <name>`; if your terminal uses the system
+   default *Monospace*, use the family printed by `fc-match monospace family`.
+   Then rebuild the cache:
+
+   ```bash
+   fc-cache -f
+   ```
+
+4. **Quit the terminal completely** (close all its windows — a new tab
+   is not enough) and reopen it.
+
+Your primary font stays the Nerd Font, so Latin text, icons and your
+prompt are unaffected; only the Arabic fallback changes.
+
+Verify — every line should print `Kawkab Mono`:
+
+```bash
+for c in 0628 0644 FEDF 0651 0671; do fc-match "<Your Font>:charset=$c" family; done
+```
+
+(Kawkab Mono covers U+0671 and all base letters and harakat, but lacks
+the isolated presentation forms, which fall through to Thabit
+automatically. Noto Sans Arabic is only needed for the alef wasla
+presentation forms U+FB50/U+FB51, which Thabit also lacks.)
+
 ### The Arabic looks shifted by a column or two
 
 Nerd Fonts (MesloLGS NF, FiraCode NF, JetBrainsMono NF, …) sometimes
@@ -455,8 +538,8 @@ decoration.
 The terminal is rendering Arabic glyphs with an unexpected visual
 width. Try, in order:
 
-1. A different monospace font with good Arabic coverage (Noto Sans
-   Mono Arabic).
+1. A different monospace font with good Arabic coverage — Kawkab Mono
+   (see [Arabic letters look disconnected or have gaps](#arabic-letters-look-disconnected-or-have-gaps)).
 2. Running `tasmiyah --no-color` — sometimes makes width issues
    visually easier to diagnose.
 3. Confirming the terminal's encoding is set to **UTF-8**.
@@ -482,6 +565,30 @@ feels slow, your **shell** is taking time to load. Time it explicitly:
 time tasmiyah --no-color
 ```
 
+### The greeting doesn't appear in new terminals
+
+Check, in order:
+
+1. **`PATH` ordering.** `~/.cargo/env` is often sourced *after* the
+   line that calls `tasmiyah`, so `command -v tasmiyah` fails at that
+   point. Use the snippet from [Shell Integration](#-shell-integration),
+   which checks `~/.cargo/bin/tasmiyah` directly.
+2. **The terminal runs a different shell than you edited.** Some
+   terminals are configured to run a custom command — e.g. Tilix *Run a
+   custom command* = `bash --login` reads `~/.profile` → `~/.bashrc`,
+   not `~/.zshrc`. Check what is actually running:
+
+   ```bash
+   ps -o comm= -p $$
+   ```
+
+   Then add the snippet to the matching rc file.
+3. **Retest** without opening a new window:
+
+   ```bash
+   exec $SHELL
+   ```
+
 ### Powerlevel10k warns about "console output during zsh initialization"
 
 If you call `tasmiyah` from `~/.zshrc` while using
@@ -505,7 +612,9 @@ Three ways to fix it — pick one:
 
    ```bash
    # ~/.zshrc
-   command -v tasmiyah >/dev/null 2>&1 && tasmiyah   # ← BEFORE the p10k block
+   # tasmiyah — keep this BEFORE the p10k block
+   if [ -x "$HOME/.cargo/bin/tasmiyah" ]; then "$HOME/.cargo/bin/tasmiyah"
+   elif command -v tasmiyah >/dev/null 2>&1; then tasmiyah; fi
 
    if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
      source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"

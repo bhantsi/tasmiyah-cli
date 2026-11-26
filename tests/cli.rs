@@ -23,7 +23,10 @@ fn run_with_env(args: &[&str], env: &[(&str, &str)]) -> (String, String, i32) {
         .env("NO_COLOR", "1")
         // Suppress the crates.io update-check footer so tests stay
         // hermetic (no network, deterministic output).
-        .env("NO_UPDATE_NOTIFIER", "1");
+        .env("NO_UPDATE_NOTIFIER", "1")
+        // Isolate from ambient developer env; callers' overrides apply below.
+        .env_remove("TASMIYAH_ROWS")
+        .env_remove("TASMIYAH_COLS");
     for (k, v) in env {
         cmd.env(k, v);
     }
@@ -333,4 +336,39 @@ fn malformed_config_does_not_crash() {
         stdout.contains("بِسْمِ"),
         "malformed config must fall back to defaults:\n{stdout}"
     );
+}
+
+fn leading_blank_lines(s: &str) -> usize {
+    s.lines().take_while(|l| l.trim().is_empty()).count()
+}
+
+#[test]
+fn piped_centered_output_has_no_leading_blank_lines() {
+    let (stdout, _e, code) = run(&["--style", "centered"]);
+    assert_eq!(code, 0);
+    assert_eq!(
+        leading_blank_lines(&stdout),
+        0,
+        "piped output padded:\n{stdout}"
+    );
+}
+
+#[test]
+fn rows_env_var_still_centers_vertically() {
+    // logo 6 + gap 1 + arabic 1 = 8 rows; (40 - 8) / 2 = 16
+    let (stdout, _e, _c) = run_with_env(
+        &["--style", "centered"],
+        &[("TASMIYAH_ROWS", "40"), ("TASMIYAH_COLS", "120")],
+    );
+    assert_eq!(leading_blank_lines(&stdout), 16);
+}
+
+#[test]
+fn rows_env_var_centers_with_translation() {
+    // 6 + 1 + 3 = 10 rows; (40 - 10) / 2 = 15
+    let (stdout, _e, _c) = run_with_env(
+        &["--style", "centered", "--translation"],
+        &[("TASMIYAH_ROWS", "40"), ("TASMIYAH_COLS", "120")],
+    );
+    assert_eq!(leading_blank_lines(&stdout), 15);
 }

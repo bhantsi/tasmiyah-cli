@@ -1,5 +1,6 @@
 //! `--style centered` (the default): a large BISMILLAH logo centered
-//! both horizontally and vertically, with the Arabic / transliteration
+//! both horizontally and vertically (vertical padding only on a TTY or
+//! with `TASMIYAH_ROWS`), with the Arabic / transliteration
 //! / English lines beneath it.
 //!
 //! Layout (top-to-bottom):
@@ -24,7 +25,7 @@ use crossterm::style::Color;
 use unicode_width::UnicodeWidthStr;
 
 use super::art::logo_for;
-use super::common::{paint, resolved_term_size};
+use super::common::{paint, resolved_term_size, vertical_rows};
 use crate::cli::Args;
 use crate::font::FontKind;
 use crate::phrases::Phrase;
@@ -44,7 +45,7 @@ pub(super) fn render<W: Write>(
     phrase: &Phrase,
     out: &mut W,
 ) -> std::io::Result<()> {
-    let (cols, rows) = resolved_term_size();
+    let (cols, _) = resolved_term_size();
     // Pick the logo for this phrase (the Basmala and several others have
     // dedicated ANSI-Shadow art). Phrases without a logo, and terminals
     // too narrow for the logo, both render text-only.
@@ -69,11 +70,11 @@ pub(super) fn render<W: Write>(
     let logo_height = logo.map_or(0, |l| l.rows.len());
     let gap = if show_logo { 1 } else { 0 };
     let banner_height = logo_height + gap + text_lines.len();
-    let top_pad = rows.saturating_sub(banner_height) / 2;
+    let top_pad = vertical_rows().map_or(0, |rows| rows.saturating_sub(banner_height) / 2);
 
-    // Vertical centering — but only when we know the terminal is taller
-    // than what we're about to draw. If `rows` is small or the terminal
-    // size lookup failed, `top_pad` is 0 and we just start at the top.
+    // Vertical centering — only on a TTY or with `TASMIYAH_ROWS`, and only
+    // when the terminal is taller than what we're about to draw. Piped
+    // output (`vertical_rows()` is `None`) starts at the top.
     for _ in 0..top_pad {
         writeln!(out)?;
     }
