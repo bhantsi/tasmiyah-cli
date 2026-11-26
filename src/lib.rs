@@ -11,6 +11,7 @@ pub mod config;
 pub mod doctor;
 pub mod font;
 pub mod phrases;
+pub mod shaping;
 pub mod terminal;
 pub mod theme;
 pub mod update;

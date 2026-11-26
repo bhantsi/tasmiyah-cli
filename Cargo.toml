@@ -52,6 +52,7 @@ dirs = "5"
 # behind the `gen` feature so the shipped binary never links them.
 clap_complete = { version = "4.5", optional = true }
 clap_mangen = { version = "0.2", optional = true }
+ar-reshaper = "1.5"
 
 [profile.release]
 # Optimize for binary size + speed — important for a tool that runs at shell startup
