@@ -166,7 +166,7 @@ status 2; run `tasmiyah --list` to see valid indices and names.
 
 | Style | Description |
 |---|---|
-| `centered` *(default)* | Large ASCII logo, vertically centered, with the phrase line(s) underneath. The logo matches the phrase (BISMILLAH for the default; ALHAMDULILLAH, SUBHANALLAH, etc. when `--random` picks one with art). Falls back to centered text when the terminal is narrower than the logo. |
+| `centered` *(default)* | Large ASCII logo, vertically centered, with the phrase line(s) underneath. The logo matches the phrase (BISMILLAH for the default; ALHAMDULILLAH, SUBHANALLAH, etc. when `--random` or `--phrase` selects one with art). Falls back to centered text when the terminal is narrower than the logo. |
 | `classic` | The v0.1 unicode-box layout: phrases inside a `╔═══…═══╗` frame. |
 | `minimal` | Plain text only — no logo, no frame, no padding. Ideal for shell prompts and scripts. |
 
@@ -374,6 +374,7 @@ tasmiyah --random --translation
 | `TASMIYAH_THEME` | Default theme (`gold` / `ocean` / `rose` / `mono`). Lower precedence than `--theme`, higher than the config file. |
 | `TASMIYAH_FONT` | Override font detection. Set to `nerd` (or `nerd-font`) to force Nerd-Font layout, or `standard` to force the plain layout. Lower precedence than `--font`. |
 | `TASMIYAH_COLS` / `TASMIYAH_ROWS` | Override the detected terminal size (columns/rows). Mainly useful for tests, screenshots, and demos. |
+| `TASMIYAH_CONFIG` | Full path to a config TOML file; overrides the default config location (e.g. for testing or dotfiles). |
 | `NO_UPDATE_NOTIFIER` | If set to **any** value, suppresses the "a new release is available" footer. See [Upgrade](#-upgrade). |
 | `CI` | If set (most CI systems set this automatically), also suppresses the update-check footer. |
 
@@ -396,6 +397,9 @@ TOML config file instead of forcing flags into your shell rc:
 - **Linux:** `~/.config/tasmiyah/config.toml`
 - **macOS:** `~/Library/Application Support/tasmiyah/config.toml`
 - **Windows:** `%APPDATA%\tasmiyah\config.toml`
+
+Set `TASMIYAH_CONFIG=/path/to/file.toml` to override the config location
+(e.g. for testing or dotfiles).
 
 Everything is optional; a missing or malformed file falls back to
 defaults (a malformed file also prints a one-line warning on stderr in
@@ -427,7 +431,7 @@ When you pass `--random`, `tasmiyah` picks uniformly from this curated
 set. Select one explicitly with `--phrase <INDEX|NAME>` (or
 `TASMIYAH_PHRASE` / the config file's `phrase`); `tasmiyah --list` prints
 this table's index and name columns. Names are case-insensitive and
-ignore spaces and punctuation, and a unique prefix is enough (for
+ignore spaces and punctuation, and a unique prefix of 3+ characters is enough (for
 example `allahu` or `hasb`).
 
 | # | Name | Arabic | Transliteration | English |

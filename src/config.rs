@@ -2,7 +2,8 @@
 //!
 //! Location: `$XDG_CONFIG_HOME/tasmiyah/config.toml` (usually
 //! `~/.config/tasmiyah/config.toml` on Linux, the platform equivalent
-//! elsewhere). Everything is optional; a missing file, missing keys, or
+//! elsewhere). Set `TASMIYAH_CONFIG` to a full file path to override the
+//! location entirely (useful for tests and dotfile setups). Everything is optional; a missing file, missing keys, or
 //! even a malformed file never stop the greeting from rendering — we
 //! warn on stderr and fall back to defaults.
 //!
@@ -14,7 +15,7 @@
 //! theme = "ocean"            # gold | ocean | rose | mono
 //! phrase = "alhamdulillah"   # index (0-11) or name; see `tasmiyah --list`
 //! translation = true
-//! vertical_center = false      # true (default) | false: no top padding in centered style
+//! vertical_center = false    # true (default) | false: no top padding in centered style
 //!
 //! [colors]                   # per-element overrides, #RRGGBB or names
 //! border = "#d4af37"
@@ -38,6 +39,7 @@ pub struct Config {
     pub style: Option<String>,
     pub font: Option<String>,
     pub theme: Option<String>,
+    #[serde(default, deserialize_with = "string_or_int")]
     pub phrase: Option<String>,
     pub translation: Option<bool>,
     pub vertical_center: Option<bool>,
@@ -68,8 +70,29 @@ impl Config {
     }
 }
 
-/// Full path of the config file, if the platform has a config dir.
+/// Accept either a TOML string or integer and yield it as a string.
+fn string_or_int<'de, D>(de: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum V {
+        S(String),
+        I(i64),
+    }
+    Ok(Option::<V>::deserialize(de)?.map(|v| match v {
+        V::S(s) => s,
+        V::I(i) => i.to_string(),
+    }))
+}
+
+/// Full path of the config file: `TASMIYAH_CONFIG` if set and non-empty,
+/// else the platform config dir (if any).
 fn config_path() -> Option<PathBuf> {
+    if let Some(p) = std::env::var_os("TASMIYAH_CONFIG").filter(|p| !p.is_empty()) {
+        return Some(PathBuf::from(p));
+    }
     Some(dirs::config_dir()?.join("tasmiyah").join("config.toml"))
 }
 
@@ -108,6 +131,14 @@ mod tests {
         assert_eq!(colors.border.as_deref(), Some("#ff0000"));
         assert_eq!(colors.arabic.as_deref(), Some("green"));
         assert!(colors.translit.is_none());
+    }
+
+    #[test]
+    fn phrase_accepts_integer_or_string() {
+        let a: Config = toml::from_str("phrase = 3").unwrap();
+        assert_eq!(a.phrase.as_deref(), Some("3"));
+        let b: Config = toml::from_str("phrase = \"inshallah\"").unwrap();
+        assert_eq!(b.phrase.as_deref(), Some("inshallah"));
     }
 
     #[test]

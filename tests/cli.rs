@@ -27,7 +27,8 @@ fn run_with_env(args: &[&str], env: &[(&str, &str)]) -> (String, String, i32) {
         // Isolate from ambient developer env; callers' overrides apply below.
         .env_remove("TASMIYAH_ROWS")
         .env_remove("TASMIYAH_COLS")
-        .env_remove("TASMIYAH_PHRASE");
+        .env_remove("TASMIYAH_PHRASE")
+        .env_remove("TASMIYAH_CONFIG");
     for (k, v) in env {
         cmd.env(k, v);
     }
@@ -295,17 +296,16 @@ fn style_flag_beats_env_var() {
 
 #[test]
 fn config_file_is_used_when_no_flag_or_env() {
-    // Point XDG_CONFIG_HOME at a temp dir with a config that selects
+    // Point TASMIYAH_CONFIG at a temp file with a config that selects
     // the classic style; the binary should pick it up with no flags.
     let dir = std::env::temp_dir().join(format!("tasmiyah-test-{}", std::process::id()));
-    let cfg_dir = dir.join("tasmiyah");
-    std::fs::create_dir_all(&cfg_dir).unwrap();
-    std::fs::write(cfg_dir.join("config.toml"), "style = \"classic\"\n").unwrap();
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("config.toml"), "style = \"classic\"\n").unwrap();
 
     let mut cmd = bin();
     cmd.env("NO_COLOR", "1")
         .env("NO_UPDATE_NOTIFIER", "1")
-        .env("XDG_CONFIG_HOME", &dir)
+        .env("TASMIYAH_CONFIG", dir.join("config.toml"))
         // Make sure the env var doesn't mask the config.
         .env_remove("TASMIYAH_STYLE")
         .env_remove("TASMIYAH_PHRASE");
@@ -313,7 +313,7 @@ fn config_file_is_used_when_no_flag_or_env() {
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
     let _ = std::fs::remove_dir_all(&dir);
     assert!(
-        stdout.contains('╔'),
+        stdout.lines().any(|l| l.trim_start().starts_with('╔')),
         "config file style=classic should render the box:\n{stdout}"
     );
 }
@@ -321,14 +321,13 @@ fn config_file_is_used_when_no_flag_or_env() {
 #[test]
 fn malformed_config_does_not_crash() {
     let dir = std::env::temp_dir().join(format!("tasmiyah-bad-{}", std::process::id()));
-    let cfg_dir = dir.join("tasmiyah");
-    std::fs::create_dir_all(&cfg_dir).unwrap();
-    std::fs::write(cfg_dir.join("config.toml"), "style = [\n").unwrap();
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("config.toml"), "style = [\n").unwrap();
 
     let mut cmd = bin();
     cmd.env("NO_COLOR", "1")
         .env("NO_UPDATE_NOTIFIER", "1")
-        .env("XDG_CONFIG_HOME", &dir)
+        .env("TASMIYAH_CONFIG", dir.join("config.toml"))
         .env_remove("TASMIYAH_STYLE")
         .env_remove("TASMIYAH_PHRASE");
     let out = cmd.output().expect("failed to execute tasmiyah binary");
@@ -433,22 +432,37 @@ fn invalid_phrase_env_falls_back_to_default() {
     assert!(err.is_empty());
 }
 
-fn run_with_phrase_config(name: &str, args: &[&str]) -> String {
+fn run_with_config(
+    name: &str,
+    body: &str,
+    args: &[&str],
+    env: &[(&str, &str)],
+) -> (String, String, i32) {
     let dir = std::env::temp_dir().join(format!("tasmiyah-{name}-{}", std::process::id()));
-    let cfg_dir = dir.join("tasmiyah");
-    std::fs::create_dir_all(&cfg_dir).unwrap();
-    std::fs::write(cfg_dir.join("config.toml"), "phrase = \"salawat\"\n").unwrap();
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("config.toml"), body).unwrap();
 
     let mut cmd = bin();
     cmd.args(args)
         .env("NO_COLOR", "1")
         .env("NO_UPDATE_NOTIFIER", "1")
-        .env("XDG_CONFIG_HOME", &dir)
+        .env("TASMIYAH_CONFIG", dir.join("config.toml"))
         .env_remove("TASMIYAH_STYLE")
         .env_remove("TASMIYAH_PHRASE");
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
     let out = cmd.output().expect("failed to execute tasmiyah binary");
     let _ = std::fs::remove_dir_all(&dir);
-    String::from_utf8_lossy(&out.stdout).into_owned()
+    (
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+        String::from_utf8_lossy(&out.stderr).into_owned(),
+        out.status.code().unwrap_or(-1),
+    )
+}
+
+fn run_with_phrase_config(name: &str, args: &[&str]) -> String {
+    run_with_config(name, "phrase = \"salawat\"\n", args, &[]).0
 }
 
 #[test]
@@ -480,15 +494,14 @@ fn no_vcenter_flag_removes_top_padding() {
 #[test]
 fn config_vertical_center_false_removes_top_padding() {
     let dir = std::env::temp_dir().join(format!("tasmiyah-vcenter-{}", std::process::id()));
-    let cfg_dir = dir.join("tasmiyah");
-    std::fs::create_dir_all(&cfg_dir).unwrap();
-    std::fs::write(cfg_dir.join("config.toml"), "vertical_center = false\n").unwrap();
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("config.toml"), "vertical_center = false\n").unwrap();
 
     let mut cmd = bin();
     cmd.args(["--style", "centered"])
         .env("NO_COLOR", "1")
         .env("NO_UPDATE_NOTIFIER", "1")
-        .env("XDG_CONFIG_HOME", &dir)
+        .env("TASMIYAH_CONFIG", dir.join("config.toml"))
         .env("TASMIYAH_ROWS", "40")
         .env("TASMIYAH_COLS", "120")
         .env_remove("TASMIYAH_STYLE")
@@ -498,4 +511,36 @@ fn config_vertical_center_false_removes_top_padding() {
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
     assert!(stdout.contains("بِسْمِ"), "nothing rendered:\n{stdout}");
     assert_eq!(leading_blank_lines(&stdout), 0, "{stdout}");
+}
+
+#[test]
+fn config_integer_phrase_is_accepted() {
+    let (out, _e, code) =
+        run_with_config("phrase-int", "phrase = 6\n", &["--style", "minimal"], &[]);
+    assert_eq!(code, 0);
+    assert!(out.contains("أَسْتَغْفِرُ"), "integer phrase ignored:\n{out}");
+}
+
+#[test]
+fn env_phrase_beats_config_phrase() {
+    let (out, _e, _c) = run_with_config(
+        "phrase-envwins",
+        "phrase = \"salawat\"\n",
+        &["--style", "minimal"],
+        &[("TASMIYAH_PHRASE", "inshallah")],
+    );
+    assert!(out.contains("إِنْ شَاءَ"), "env phrase did not win:\n{out}");
+}
+
+#[test]
+fn invalid_config_phrase_is_ignored() {
+    let (out, err, code) = run_with_config(
+        "phrase-bad",
+        "phrase = \"nope\"\n",
+        &["--style", "minimal"],
+        &[],
+    );
+    assert_eq!(code, 0);
+    assert!(out.contains("بِسْمِ"));
+    assert!(err.is_empty(), "{err}");
 }

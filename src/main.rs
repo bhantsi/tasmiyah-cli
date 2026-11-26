@@ -20,7 +20,10 @@ fn main() -> io::Result<()> {
     // `--list` prints the phrase table and exits before any rendering
     // or update check.
     if args.list {
-        return print_list(&mut io::stdout().lock());
+        return match print_list(&mut io::stdout().lock()) {
+            Err(e) if e.kind() == io::ErrorKind::BrokenPipe => Ok(()),
+            r => r,
+        };
     }
 
     // Resolve the effective style: CLI > TASMIYAH_STYLE > config > centered.
