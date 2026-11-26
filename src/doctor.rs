@@ -1,4 +1,4 @@
-//! Pure diagnostic checks for `--doctor`.
+//! Pure diagnostic checks for `tasmiyah doctor`.
 //!
 //! Every function here is side-effect free: environment, fontconfig
 //! results and paths are injected by the caller.

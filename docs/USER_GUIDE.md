@@ -18,9 +18,9 @@ the [README](../README.md).
 8. [Phrase Library](#-phrase-library)
 9. [Diagnostics](#-diagnostics)
 10. [Troubleshooting](#-troubleshooting)
-9. [Upgrade](#-upgrade)
-10. [Uninstall](#-uninstall)
-11. [Getting Help](#-getting-help)
+11. [Upgrade](#-upgrade)
+12. [Uninstall](#-uninstall)
+13. [Getting Help](#-getting-help)
 
 ---
 
@@ -465,7 +465,7 @@ problems. It prints four lines, never changes anything, and always exits 0.
 ```console
 $ tasmiyah doctor --font-family "JetBrainsMono Nerd Font"
 ✓ Locale: en_US.UTF-8 is UTF-8
-✓ Terminal: kitty renders Arabic right-to-left
+✓ Terminal: VTE renders Arabic right-to-left
 ✓ Arabic font: checked "JetBrainsMono Nerd Font": served by Kawkab Mono
 i Shell startup: installed in ~/.cargo/bin, which some shells add to PATH only after rc files run; in rc files call "$HOME/.cargo/bin/tasmiyah"
 ```
