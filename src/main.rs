@@ -42,6 +42,11 @@ fn main() -> io::Result<()> {
         args.translation = true;
     }
 
+    // Same pattern: `vertical_center = false` in config acts as `--no-vcenter`.
+    if !args.no_vcenter && cfg.vertical_center == Some(false) {
+        args.no_vcenter = true;
+    }
+
     let theme = theme::Theme::for_args(&args, preset, cfg.colors.as_ref());
     let (phrase_index, phrase) = match resolve_phrase(&args, &cfg) {
         Ok(found) => found,

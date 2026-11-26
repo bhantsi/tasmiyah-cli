@@ -37,6 +37,10 @@ pub struct Args {
     #[arg(short = 'l', long)]
     pub list: bool,
 
+    /// Don't pad the centered banner vertically; start right below existing output.
+    #[arg(long)]
+    pub no_vcenter: bool,
+
     /// Visual style. Default is a large BISMILLAH logo centered in the
     /// terminal; `classic` is the v0.1 unicode box; `minimal` strips
     /// all decoration for shell prompts and scripting. Falls back to

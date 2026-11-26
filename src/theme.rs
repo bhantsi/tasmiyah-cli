@@ -260,6 +260,7 @@ mod tests {
             random: false,
             phrase: None,
             list: false,
+            no_vcenter: false,
             style: Some(crate::cli::StyleKind::Centered),
             font: Some(crate::cli::FontArg::Auto),
             theme: None,

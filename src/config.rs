@@ -14,6 +14,7 @@
 //! theme = "ocean"            # gold | ocean | rose | mono
 //! phrase = "alhamdulillah"   # index (0-11) or name; see `tasmiyah --list`
 //! translation = true
+//! vertical_center = false      # true (default) | false: no top padding in centered style
 //!
 //! [colors]                   # per-element overrides, #RRGGBB or names
 //! border = "#d4af37"
@@ -39,6 +40,7 @@ pub struct Config {
     pub theme: Option<String>,
     pub phrase: Option<String>,
     pub translation: Option<bool>,
+    pub vertical_center: Option<bool>,
     pub colors: Option<ColorOverrides>,
 }
 

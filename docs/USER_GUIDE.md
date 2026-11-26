@@ -146,6 +146,7 @@ both a short (`-x`) and a long (`--xxx`) form.
 | `--random` | `-r` | Pick a random phrase from the [library](#-phrase-library) instead of the Basmala. |
 | `--phrase <INDEX\|NAME>` | `-p` | Show a specific phrase by index (`0`–`11`) or name (e.g. `alhamdulillah`). Conflicts with `--random`. See [Phrase Library](#-phrase-library). |
 | `--list` | `-l` | List every phrase with its index and name, then exit. |
+| `--no-vcenter` | — | Don't pad the centered banner vertically; start right below existing output. Config: `vertical_center = false`. |
 | `--style <STYLE>` | `-s` | Layout: `centered` *(default)*, `classic`, or `minimal`. See [Styles](#styles). |
 | `--font <FONT>` | `-f` | Arabic-width layout hint: `auto` *(default)*, `standard`, or `nerd`. See [Environment Variables](#-environment-variables). |
 | `--theme <THEME>` | — | Color palette: `gold` *(default)*, `ocean`, `rose`, or `mono`. See [Themes](#themes). |
@@ -345,6 +346,12 @@ Add to `~/.config/nushell/config.nu`:
 if (which tasmiyah | is-not-empty) { tasmiyah }
 ```
 
+### Running another greeter first?
+
+If you run something like `fastfetch` before `tasmiyah`, use
+`--no-vcenter` so the banner starts right below its output instead of
+being padded down the terminal.
+
 ### Want a random phrase on every shell?
 
 Append flags in any of the snippets above:
@@ -400,6 +407,7 @@ font = "nerd"              # standard | nerd | auto
 theme = "ocean"            # gold | ocean | rose | mono
 phrase = "alhamdulillah"   # index (0-11) or name; see `tasmiyah --list`
 translation = true         # always show transliteration + English
+vertical_center = false    # no top padding in the centered style (like --no-vcenter)
 
 [colors]                   # per-element overrides, #RRGGBB or a name
 border = "#d4af37"

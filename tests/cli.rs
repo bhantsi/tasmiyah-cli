@@ -465,3 +465,37 @@ fn random_flag_beats_config_phrase() {
     });
     assert!(any_other, "--random never overrode the config phrase");
 }
+
+#[test]
+fn no_vcenter_flag_removes_top_padding() {
+    let (out, _e, code) = run_with_env(
+        &["--style", "centered", "--no-vcenter"],
+        &[("TASMIYAH_ROWS", "40"), ("TASMIYAH_COLS", "120")],
+    );
+    assert_eq!(code, 0);
+    assert!(out.contains("بِسْمِ"), "nothing rendered:\n{out}");
+    assert_eq!(leading_blank_lines(&out), 0);
+}
+
+#[test]
+fn config_vertical_center_false_removes_top_padding() {
+    let dir = std::env::temp_dir().join(format!("tasmiyah-vcenter-{}", std::process::id()));
+    let cfg_dir = dir.join("tasmiyah");
+    std::fs::create_dir_all(&cfg_dir).unwrap();
+    std::fs::write(cfg_dir.join("config.toml"), "vertical_center = false\n").unwrap();
+
+    let mut cmd = bin();
+    cmd.args(["--style", "centered"])
+        .env("NO_COLOR", "1")
+        .env("NO_UPDATE_NOTIFIER", "1")
+        .env("XDG_CONFIG_HOME", &dir)
+        .env("TASMIYAH_ROWS", "40")
+        .env("TASMIYAH_COLS", "120")
+        .env_remove("TASMIYAH_STYLE")
+        .env_remove("TASMIYAH_PHRASE");
+    let out = cmd.output().expect("failed to execute tasmiyah binary");
+    let _ = std::fs::remove_dir_all(&dir);
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    assert!(stdout.contains("بِسْمِ"), "nothing rendered:\n{stdout}");
+    assert_eq!(leading_blank_lines(&stdout), 0, "{stdout}");
+}
