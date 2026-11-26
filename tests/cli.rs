@@ -23,7 +23,10 @@ fn run_with_env(args: &[&str], env: &[(&str, &str)]) -> (String, String, i32) {
         .env("NO_COLOR", "1")
         // Suppress the crates.io update-check footer so tests stay
         // hermetic (no network, deterministic output).
-        .env("NO_UPDATE_NOTIFIER", "1");
+        .env("NO_UPDATE_NOTIFIER", "1")
+        // Isolate from ambient developer env; callers' overrides apply below.
+        .env_remove("TASMIYAH_ROWS")
+        .env_remove("TASMIYAH_COLS");
     for (k, v) in env {
         cmd.env(k, v);
     }

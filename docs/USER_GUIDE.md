@@ -279,7 +279,9 @@ Run `tasmiyah` automatically every time you open a new shell session.
 
 The `command -v` / `Get-Command` / `type -q` / `which` guard means:
 *if `tasmiyah` isn't installed, fail silently* instead of printing a
-confusing "command not found" on every login.
+confusing "command not found" on every login. (The bash/zsh snippets
+also check `~/.cargo/bin/tasmiyah` directly first; see the note in those
+sections.)
 
 ### Bash
 
@@ -473,9 +475,10 @@ Two things commonly cause this on Linux terminals:
 
    ```bash
    mkdir -p ~/.local/share/fonts/kawkab-mono
-   cd /tmp
-   curl -LO https://github.com/aiaf/kawkab-mono/releases/download/v0.501/kawkab-mono-0.501.zip
-   unzip kawkab-mono-0.501.zip -d ~/.local/share/fonts/kawkab-mono/
+   curl -L -o /tmp/kawkab-mono.zip https://github.com/aiaf/kawkab-mono/releases/download/v0.501/kawkab-mono-0.501.zip
+   unzip -o /tmp/kawkab-mono.zip -d ~/.local/share/fonts/kawkab-mono/
+   rm /tmp/kawkab-mono.zip
+   fc-cache -f
    ```
 
 2. Install **Thabit** (covers the isolated forms Kawkab Mono lacks):
@@ -486,7 +489,10 @@ Two things commonly cause this on Linux terminals:
 
 3. Copy [`docs/fontconfig/60-tasmiyah-arabic.conf`](fontconfig/60-tasmiyah-arabic.conf)
    to `~/.config/fontconfig/conf.d/` and replace `JetBrainsMono Nerd Font`
-   in it with your terminal's exact font family. Then rebuild the cache:
+   in it with your terminal's exact font family. Find the exact name with
+   `fc-list : family | grep -i <name>`; if your terminal uses the system
+   default *Monospace*, use the family printed by `fc-match monospace family`.
+   Then rebuild the cache:
 
    ```bash
    fc-cache -f
@@ -501,11 +507,13 @@ prompt are unaffected; only the Arabic fallback changes.
 Verify — every line should print `Kawkab Mono`:
 
 ```bash
-for c in 0628 0644 FEDF 0651; do fc-match "<Your Font>:charset=$c" family; done
+for c in 0628 0644 FEDF 0651 0671; do fc-match "<Your Font>:charset=$c" family; done
 ```
 
-(The rarer isolated forms fall through to Thabit, and U+0671 to Noto
-Sans Arabic, automatically.)
+(Kawkab Mono covers U+0671 and all base letters and harakat, but lacks
+the isolated presentation forms, which fall through to Thabit
+automatically. Noto Sans Arabic is only needed for the alef wasla
+presentation forms U+FB50/U+FB51, which Thabit also lacks.)
 
 ### The Arabic looks shifted by a column or two
 
@@ -604,7 +612,7 @@ Three ways to fix it — pick one:
 
    ```bash
    # ~/.zshrc
-   # ← BEFORE the p10k block
+   # tasmiyah — keep this BEFORE the p10k block
    if [ -x "$HOME/.cargo/bin/tasmiyah" ]; then "$HOME/.cargo/bin/tasmiyah"
    elif command -v tasmiyah >/dev/null 2>&1; then tasmiyah; fi
 
