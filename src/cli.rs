@@ -66,7 +66,7 @@ pub struct Args {
     /// WezTerm, ...); `native` always prints logical-order text;
     /// `shaped` always pre-shapes (looks reversed in BiDi terminals).
     /// Falls back to `TASMIYAH_ARABIC`, then the config file, then `auto`.
-    #[arg(long, value_enum)]
+    #[arg(long, value_enum, global = true)]
     pub arabic: Option<ArabicMode>,
 
     #[command(subcommand)]

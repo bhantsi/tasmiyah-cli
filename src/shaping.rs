@@ -112,9 +112,7 @@ mod tests {
     fn quranic_letters_survive() {
         let s = shape_for_ltr_terminal(crate::phrases::PHRASES[0].arabic);
         assert!(s.contains('\u{0670}'));
-        assert!(s
-            .chars()
-            .any(|c| c == '\u{0671}' || c == '\u{FB50}' || c == '\u{FB51}'));
+        assert!(s.chars().any(|c| c == '\u{FB50}' || c == '\u{FB51}'));
     }
 
     #[test]

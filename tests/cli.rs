@@ -622,6 +622,7 @@ fn classic_box_fits_shaped_line() {
         .map(unicode_width::UnicodeWidthStr::width)
         .collect();
     assert_eq!(widths.len(), 1, "box rows differ in width:\n{out}");
+    assert!(has_presentation_forms(&out), "{out}");
 }
 
 #[test]
@@ -689,5 +690,15 @@ fn doctor_missing_terminal_reports_shaped_when_forced() {
         "{out}"
     );
     let (out, _e, _c) = run_with_env(&["--arabic", "native", "doctor"], &env);
+    assert!(out.contains("try --arabic shaped"), "{out}");
+}
+
+#[test]
+fn arabic_flag_accepted_after_doctor() {
+    let (out, _e, code) = run_with_env(
+        &["doctor", "--arabic", "native"],
+        &[("KITTY_WINDOW_ID", "1")],
+    );
+    assert_eq!(code, 0);
     assert!(out.contains("try --arabic shaped"), "{out}");
 }

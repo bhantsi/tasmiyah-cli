@@ -603,7 +603,11 @@ so use it only where the terminal has none. Make it permanent with
 `export TASMIYAH_ARABIC=shaped` or `arabic = "shaped"` in the config file.
 If detection guesses wrong (for example a nested terminal inherits another
 terminal's variables), force it with `--arabic native` or `--arabic shaped`;
-`tasmiyah doctor` shows what was detected.
+`tasmiyah doctor` shows what was detected. tmux or screen started inside
+kitty inherits `KITTY_WINDOW_ID` and keeps shaping (correct, since kitty
+draws the cells); a session started in kitty and re-attached from a VTE
+terminal will still shape, so use `--arabic native` or
+`TASMIYAH_ARABIC=native` there.
 
 ### The Arabic looks shifted by a column or two
 
