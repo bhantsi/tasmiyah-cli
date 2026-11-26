@@ -13,6 +13,7 @@
 //! style = "classic"          # classic | centered | minimal
 //! font = "nerd"              # standard | nerd | auto
 //! theme = "ocean"            # gold | ocean | rose | mono
+//! arabic = "auto"           # auto | native | shaped (see `--arabic`)
 //! phrase = "alhamdulillah"   # index (0-11) or name; see `tasmiyah --list`
 //! translation = true
 //! vertical_center = false    # true (default) | false: no top padding in centered style
@@ -24,7 +25,7 @@
 //!
 //! Precedence (handled by the binary entry point):
 //! CLI flag > env var (`TASMIYAH_STYLE`, `TASMIYAH_FONT`,
-//! `TASMIYAH_THEME`, `TASMIYAH_PHRASE`) > config file > built-in default.
+//! `TASMIYAH_THEME`, `TASMIYAH_PHRASE`, `TASMIYAH_ARABIC`) > config file > built-in default.
 
 use std::io::IsTerminal;
 use std::path::PathBuf;
@@ -39,6 +40,7 @@ pub struct Config {
     pub style: Option<String>,
     pub font: Option<String>,
     pub theme: Option<String>,
+    pub arabic: Option<String>,
     #[serde(default, deserialize_with = "string_or_int")]
     pub phrase: Option<String>,
     pub translation: Option<bool>,

@@ -28,7 +28,8 @@ fn run_with_env(args: &[&str], env: &[(&str, &str)]) -> (String, String, i32) {
         .env_remove("TASMIYAH_ROWS")
         .env_remove("TASMIYAH_COLS")
         .env_remove("TASMIYAH_PHRASE")
-        .env_remove("TASMIYAH_CONFIG");
+        .env_remove("TASMIYAH_CONFIG")
+        .env_remove("TASMIYAH_ARABIC");
     for (k, v) in env {
         cmd.env(k, v);
     }
@@ -308,6 +309,7 @@ fn config_file_is_used_when_no_flag_or_env() {
         .env("TASMIYAH_CONFIG", dir.join("config.toml"))
         // Make sure the env var doesn't mask the config.
         .env_remove("TASMIYAH_STYLE")
+        .env_remove("TASMIYAH_ARABIC")
         .env_remove("TASMIYAH_PHRASE");
     let out = cmd.output().expect("failed to execute tasmiyah binary");
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
@@ -329,6 +331,7 @@ fn malformed_config_does_not_crash() {
         .env("NO_UPDATE_NOTIFIER", "1")
         .env("TASMIYAH_CONFIG", dir.join("config.toml"))
         .env_remove("TASMIYAH_STYLE")
+        .env_remove("TASMIYAH_ARABIC")
         .env_remove("TASMIYAH_PHRASE");
     let out = cmd.output().expect("failed to execute tasmiyah binary");
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
@@ -448,6 +451,7 @@ fn run_with_config(
         .env("NO_UPDATE_NOTIFIER", "1")
         .env("TASMIYAH_CONFIG", dir.join("config.toml"))
         .env_remove("TASMIYAH_STYLE")
+        .env_remove("TASMIYAH_ARABIC")
         .env_remove("TASMIYAH_PHRASE");
     for (k, v) in env {
         cmd.env(k, v);
@@ -505,6 +509,7 @@ fn config_vertical_center_false_removes_top_padding() {
         .env("TASMIYAH_ROWS", "40")
         .env("TASMIYAH_COLS", "120")
         .env_remove("TASMIYAH_STYLE")
+        .env_remove("TASMIYAH_ARABIC")
         .env_remove("TASMIYAH_PHRASE");
     let out = cmd.output().expect("failed to execute tasmiyah binary");
     let _ = std::fs::remove_dir_all(&dir);
@@ -573,4 +578,100 @@ fn doctor_without_fontconfig_still_succeeds() {
 fn plain_invocation_still_prints_banner() {
     let (out, _e, _c) = run(&["--style", "minimal"]);
     assert!(out.contains("بِسْمِ"));
+}
+
+fn has_presentation_forms(s: &str) -> bool {
+    s.chars().any(|c| ('\u{FE70}'..='\u{FEFC}').contains(&c))
+}
+
+#[test]
+fn explicit_shaped_applies_when_piped() {
+    let (out, _e, code) = run(&["--style", "minimal", "--arabic", "shaped"]);
+    assert_eq!(code, 0);
+    assert!(has_presentation_forms(&out), "{out}");
+    assert!(!out.contains("بِسْمِ"));
+}
+
+#[test]
+fn auto_is_native_when_piped_even_in_kitty() {
+    let (out, _e, _c) = run_with_env(&["--style", "minimal"], &[("KITTY_WINDOW_ID", "1")]);
+    assert!(out.contains("بِسْمِ"));
+}
+
+#[test]
+fn classic_box_fits_shaped_line() {
+    let (out, _e, _c) = run(&["--style", "classic", "--arabic", "shaped"]);
+    let widths: std::collections::BTreeSet<usize> = out
+        .lines()
+        .map(unicode_width::UnicodeWidthStr::width)
+        .collect();
+    assert_eq!(widths.len(), 1, "box rows differ in width:\n{out}");
+}
+
+#[test]
+fn explicit_native_leaves_logical_text() {
+    let (out, _e, _c) = run(&["--style", "minimal", "--arabic", "native"]);
+    assert!(out.contains("بِسْمِ"));
+}
+
+#[test]
+fn env_arabic_applies_and_cli_beats_it() {
+    let (out, _e, _c) = run_with_env(&["--style", "minimal"], &[("TASMIYAH_ARABIC", "shaped")]);
+    assert!(has_presentation_forms(&out), "{out}");
+    let (out, _e, _c) = run_with_env(
+        &["--style", "minimal", "--arabic", "native"],
+        &[("TASMIYAH_ARABIC", "shaped")],
+    );
+    assert!(out.contains("بِسْمِ"));
+}
+
+#[test]
+fn invalid_env_arabic_is_ignored() {
+    let (out, err, code) = run_with_env(&["--style", "minimal"], &[("TASMIYAH_ARABIC", "bogus")]);
+    assert_eq!(code, 0);
+    assert!(out.contains("بِسْمِ"));
+    assert!(err.is_empty(), "{err}");
+}
+
+#[test]
+fn config_arabic_applies_and_env_beats_it() {
+    let (out, _e, _c) = run_with_config(
+        "arabic-cfg",
+        "arabic = \"shaped\"\n",
+        &["--style", "minimal"],
+        &[],
+    );
+    assert!(has_presentation_forms(&out), "{out}");
+    let (out, _e, _c) = run_with_config(
+        "arabic-cfg-env",
+        "arabic = \"shaped\"\n",
+        &["--style", "minimal"],
+        &[("TASMIYAH_ARABIC", "native")],
+    );
+    assert!(out.contains("بِسْمِ"));
+}
+
+#[test]
+fn invalid_config_arabic_is_ignored() {
+    let (out, err, code) = run_with_config(
+        "arabic-bad",
+        "arabic = \"sideways\"\n",
+        &["--style", "minimal"],
+        &[],
+    );
+    assert_eq!(code, 0);
+    assert!(out.contains("بِسْمِ"));
+    assert!(err.is_empty(), "{err}");
+}
+
+#[test]
+fn doctor_missing_terminal_reports_shaped_when_forced() {
+    let env = [("KITTY_WINDOW_ID", "1")];
+    let (out, _e, _c) = run_with_env(&["--arabic", "shaped", "doctor"], &env);
+    assert!(
+        out.contains("using shaped Arabic (override with --arabic native)"),
+        "{out}"
+    );
+    let (out, _e, _c) = run_with_env(&["--arabic", "native", "doctor"], &env);
+    assert!(out.contains("try --arabic shaped"), "{out}");
 }

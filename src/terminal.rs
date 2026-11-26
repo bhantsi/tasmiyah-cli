@@ -110,4 +110,50 @@ mod tests {
     fn empty_env_is_unknown() {
         assert_eq!(detect(&env(&[])), Bidi::Unknown);
     }
+
+    #[test]
+    fn konsole_is_native() {
+        assert_eq!(
+            detect(&env(&[("KONSOLE_VERSION", "230800")])),
+            Bidi::Native("Konsole")
+        );
+    }
+
+    #[test]
+    fn apple_terminal_is_native() {
+        assert_eq!(
+            detect(&env(&[("TERM_PROGRAM", "Apple_Terminal")])),
+            Bidi::Native("Terminal.app")
+        );
+    }
+
+    #[test]
+    fn ghostty_is_missing() {
+        assert_eq!(
+            detect(&env(&[("TERM_PROGRAM", "ghostty")])),
+            Bidi::Missing("Ghostty")
+        );
+    }
+
+    #[test]
+    fn alacritty_by_socket() {
+        assert_eq!(
+            detect(&env(&[("ALACRITTY_SOCKET", "/run/user/1000/a.sock")])),
+            Bidi::Missing("Alacritty")
+        );
+    }
+
+    #[test]
+    fn kitty_by_term() {
+        assert_eq!(
+            detect(&env(&[("TERM", "xterm-kitty")])),
+            Bidi::Missing("kitty")
+        );
+    }
+
+    #[test]
+    fn empty_vte_version_counts_as_set() {
+        let e = env(&[("VTE_VERSION", ""), ("KITTY_WINDOW_ID", "1")]);
+        assert_eq!(detect(&e), Bidi::Native("VTE"));
+    }
 }

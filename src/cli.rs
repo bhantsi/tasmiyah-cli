@@ -61,6 +61,14 @@ pub struct Args {
     #[arg(long, value_enum)]
     pub theme: Option<crate::theme::ThemePreset>,
 
+    /// How to draw the Arabic line. `auto` pre-shapes it only when
+    /// stdout is a terminal known to lack BiDi (Alacritty, kitty,
+    /// WezTerm, ...); `native` always prints logical-order text;
+    /// `shaped` always pre-shapes (looks reversed in BiDi terminals).
+    /// Falls back to `TASMIYAH_ARABIC`, then the config file, then `auto`.
+    #[arg(long, value_enum)]
+    pub arabic: Option<ArabicMode>,
+
     #[command(subcommand)]
     pub command: Option<Command>,
 }
@@ -99,4 +107,15 @@ pub enum FontArg {
     Nerd,
     /// Auto-detect via `TASMIYAH_FONT` and shell heuristics. *(Default.)*
     Auto,
+}
+
+/// User-facing `--arabic` selector. See [`crate::shaping::resolve_arabic`].
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArabicMode {
+    /// Shape only on a TTY whose terminal is known to lack BiDi. *(Default.)*
+    Auto,
+    /// Never shape: print logical-order text for BiDi-capable terminals.
+    Native,
+    /// Always shape into presentation forms in visual order.
+    Shaped,
 }

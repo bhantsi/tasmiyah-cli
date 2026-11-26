@@ -4,6 +4,21 @@
 
 use ar_reshaper::{ArabicReshaper, ReshaperConfig};
 
+use crate::cli::ArabicMode;
+use crate::terminal::Bidi;
+
+/// Decide whether to pre-shape the Arabic line (true = shape).
+///
+/// `Auto` shapes only on a TTY whose terminal is known to lack BiDi;
+/// it never shapes off-TTY or for BiDi-native / unidentified terminals.
+pub fn resolve_arabic(mode: ArabicMode, stdout_is_tty: bool, bidi: Bidi) -> bool {
+    match mode {
+        ArabicMode::Native => false,
+        ArabicMode::Shaped => true,
+        ArabicMode::Auto => stdout_is_tty && matches!(bidi, Bidi::Missing(_)),
+    }
+}
+
 /// True for Arabic combining marks (harakat, Quranic annotation marks).
 pub fn is_arabic_mark(c: char) -> bool {
     matches!(c as u32,
@@ -36,6 +51,30 @@ pub fn shape_for_ltr_terminal(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cli::ArabicMode::{Auto, Native, Shaped};
+    use crate::terminal::Bidi;
+
+    #[test]
+    fn auto_never_shapes_in_vte() {
+        assert!(!resolve_arabic(Auto, true, Bidi::Native("VTE")));
+    }
+
+    #[test]
+    fn auto_shapes_in_kitty_tty() {
+        assert!(resolve_arabic(Auto, true, Bidi::Missing("kitty")));
+    }
+
+    #[test]
+    fn auto_never_shapes_off_tty() {
+        assert!(!resolve_arabic(Auto, false, Bidi::Missing("kitty")));
+        assert!(!resolve_arabic(Auto, true, Bidi::Unknown));
+    }
+
+    #[test]
+    fn explicit_modes_win() {
+        assert!(resolve_arabic(Shaped, false, Bidi::Native("VTE")));
+        assert!(!resolve_arabic(Native, true, Bidi::Missing("kitty")));
+    }
 
     #[test]
     fn marks_follow_their_base_after_reversal() {

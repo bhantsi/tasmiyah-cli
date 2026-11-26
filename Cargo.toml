@@ -56,6 +56,9 @@ dirs = "5"
 clap_complete = { version = "4.5", optional = true }
 clap_mangen = { version = "0.2", optional = true }
 
+[dev-dependencies]
+unicode-width = "0.2"
+
 [profile.release]
 # Optimize for binary size + speed — important for a tool that runs at shell startup
 opt-level = 3
