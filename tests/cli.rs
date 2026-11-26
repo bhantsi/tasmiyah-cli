@@ -7,9 +7,16 @@
 
 use std::process::Command;
 
-/// The binary with ambient terminal-identifying variables scrubbed, so
-/// BiDi detection is hermetic however the tests are launched. Callers'
-/// later `.env(..)` calls still win.
+/// The binary isolated from the developer's environment, so tests are
+/// hermetic however they are launched:
+///
+/// * terminal-identifying variables are scrubbed (BiDi detection),
+/// * `TASMIYAH_STYLE` / `_THEME` / `_FONT` are removed,
+/// * `TASMIYAH_CONFIG` points at a file that does not exist, so the
+///   developer's real `tasmiyah/config.toml` is never read (an empty
+///   value would be ignored and fall back to the platform path).
+///
+/// Callers' later `.env(..)` calls still win.
 fn bin() -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_tasmiyah"));
     for k in [
@@ -20,10 +27,17 @@ fn bin() -> Command {
         "ALACRITTY_WINDOW_ID",
         "ALACRITTY_SOCKET",
         "WT_SESSION",
+        "TASMIYAH_STYLE",
+        "TASMIYAH_THEME",
+        "TASMIYAH_FONT",
     ] {
         cmd.env_remove(k);
     }
     cmd.env("TERM", "xterm-256color");
+    let no_config = std::env::temp_dir()
+        .join(format!("tasmiyah-test-no-config-{}", std::process::id()))
+        .join("config.toml");
+    cmd.env("TASMIYAH_CONFIG", no_config);
     cmd
 }
 
@@ -44,7 +58,6 @@ fn run_with_env(args: &[&str], env: &[(&str, &str)]) -> (String, String, i32) {
         .env_remove("TASMIYAH_ROWS")
         .env_remove("TASMIYAH_COLS")
         .env_remove("TASMIYAH_PHRASE")
-        .env_remove("TASMIYAH_CONFIG")
         .env_remove("TASMIYAH_ARABIC");
     for (k, v) in env {
         cmd.env(k, v);
