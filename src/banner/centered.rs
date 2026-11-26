@@ -70,11 +70,16 @@ pub(super) fn render<W: Write>(
     let logo_height = logo.map_or(0, |l| l.rows.len());
     let gap = if show_logo { 1 } else { 0 };
     let banner_height = logo_height + gap + text_lines.len();
-    let top_pad = vertical_rows().map_or(0, |rows| rows.saturating_sub(banner_height) / 2);
+    // Vertical centering — only on a TTY or with `TASMIYAH_ROWS`, only when
+    // the terminal is taller than what we're about to draw, and never with
+    // `--no-vcenter`. Piped output (`vertical_rows()` is `None`) starts at
+    // the top.
+    let top_pad = if args.no_vcenter {
+        0
+    } else {
+        vertical_rows().map_or(0, |rows| rows.saturating_sub(banner_height) / 2)
+    };
 
-    // Vertical centering — only on a TTY or with `TASMIYAH_ROWS`, and only
-    // when the terminal is taller than what we're about to draw. Piped
-    // output (`vertical_rows()` is `None`) starts at the top.
     for _ in 0..top_pad {
         writeln!(out)?;
     }
