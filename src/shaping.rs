@@ -55,7 +55,17 @@ mod tests {
     #[test]
     fn spaces_and_word_order_reverse() {
         let s = shape_for_ltr_terminal("بِسْمِ ٱللَّٰهِ");
-        assert!(s.ends_with(|c: char| ('\u{FE8F}'..='\u{FE92}').contains(&c) || is_arabic_mark(c)));
+        let mut letters = s.chars().filter(|&c| !is_arabic_mark(c) && c != ' ');
+        assert_eq!(
+            letters.next(),
+            Some('\u{FEEA}'),
+            "heh final must come first: {s:?}"
+        );
+        assert_eq!(
+            letters.next_back(),
+            Some('\u{FE91}'),
+            "beh initial must come last: {s:?}"
+        );
         assert_eq!(s.matches(' ').count(), 1);
     }
 

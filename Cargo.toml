@@ -38,6 +38,9 @@ crossterm = "0.28"
 # Correct visual width for Unicode (essential for Arabic centering)
 unicode-width = "0.2"
 
+# Arabic presentation-form shaping for terminals without BiDi (`--arabic shaped`)
+ar-reshaper = "1.5"
+
 # Daily-cached crates.io version check so users see a one-line notice
 # when a new release ships. Pulled in with default features (`ureq`
 # blocking client, no `reqwest`/OpenSSL), runs once per 24h per user.
@@ -52,7 +55,6 @@ dirs = "5"
 # behind the `gen` feature so the shipped binary never links them.
 clap_complete = { version = "4.5", optional = true }
 clap_mangen = { version = "0.2", optional = true }
-ar-reshaper = "1.5"
 
 [profile.release]
 # Optimize for binary size + speed — important for a tool that runs at shell startup
