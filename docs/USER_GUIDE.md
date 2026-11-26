@@ -152,6 +152,7 @@ Every flag has both a short (`-x`) and a long (`--xxx`) form.
 | `--style <STYLE>` | `-s` | Layout: `centered` *(default)*, `classic`, or `minimal`. See [Styles](#styles). |
 | `--font <FONT>` | `-f` | Arabic-width layout hint: `auto` *(default)*, `standard`, or `nerd`. See [Environment Variables](#-environment-variables). |
 | `--theme <THEME>` | — | Color palette: `gold` *(default)*, `ocean`, `rose`, or `mono`. See [Themes](#themes). |
+| `--arabic <MODE>` | — | How to draw the Arabic line: `auto` *(default)*, `native`, or `shaped`. `auto` pre-shapes only on a terminal known to lack BiDi (Alacritty, kitty, WezTerm, Ghostty, Windows Terminal) when stdout is a TTY. See [Arabic appears reversed](#arabic-appears-reversed-alacritty-kitty-wezterm-). |
 | `doctor [--font-family FAMILY]` | — | Subcommand: diagnose Arabic rendering and shell-startup problems; prints no banner. See [Diagnostics](#-diagnostics). |
 | `--help` | `-h` | Print the auto-generated help and exit. |
 | `--version` | `-V` | Print the version and exit. |
@@ -375,6 +376,7 @@ tasmiyah --random --translation
 | `TASMIYAH_STYLE` | Default style (`classic` / `centered` / `minimal`). Lower precedence than `--style`, higher than the config file. |
 | `TASMIYAH_PHRASE` | Default phrase (index `0`–`11` or name; see `tasmiyah --list`). Lower precedence than `--phrase` and `--random`, higher than the config file. Invalid values are ignored. |
 | `TASMIYAH_THEME` | Default theme (`gold` / `ocean` / `rose` / `mono`). Lower precedence than `--theme`, higher than the config file. |
+| `TASMIYAH_ARABIC` | Default Arabic mode (`auto` / `native` / `shaped`). Lower precedence than `--arabic`, higher than the config file. Invalid values are ignored. |
 | `TASMIYAH_FONT` | Override font detection. Set to `nerd` (or `nerd-font`) to force Nerd-Font layout, or `standard` to force the plain layout. Lower precedence than `--font`. |
 | `TASMIYAH_COLS` / `TASMIYAH_ROWS` | Override the detected terminal size (columns/rows). Mainly useful for tests, screenshots, and demos. |
 | `TASMIYAH_CONFIG` | Full path to a config TOML file; overrides the default config location (e.g. for testing or dotfiles). |
@@ -412,6 +414,7 @@ interactive sessions).
 style = "classic"          # classic | centered | minimal
 font = "nerd"              # standard | nerd | auto
 theme = "ocean"            # gold | ocean | rose | mono
+arabic = "auto"            # auto | native | shaped; see `--arabic`
 phrase = "alhamdulillah"   # index (0-11) or name; see `tasmiyah --list`
 translation = true         # always show transliteration + English
 vertical_center = false    # no top padding in the centered style (like --no-vcenter)
@@ -476,7 +479,12 @@ Marks: `✓` fine, `!` a likely problem, `i` information only.
 
 - **Locale** — your `LC_ALL` / `LC_CTYPE` / `LANG` must name a UTF-8 locale.
 - **Terminal** — whether your terminal is known to render Arabic right-to-left
-  (BiDi). `i` means it could not be identified.
+  (BiDi). `i` means it could not be identified. For a terminal known to lack
+  BiDi there are two variants: `✓ … has no BiDi; using shaped Arabic
+  (override with --arabic native)` when your effective `--arabic` mode (`auto`,
+  or what you set) would shape the Arabic in this terminal, and `! … has no
+  BiDi; Arabic may appear reversed; try --arabic shaped` when it would not
+  (for example `--arabic native`).
 - **Arabic font** — asks fontconfig (`fc-match`) which font serves the Arabic
   letters for `--font-family`. With `--font-family` a `!` means the letters
   are split across several fonts or served by a font not known to be
@@ -576,6 +584,30 @@ for c in 0628 0644 FEDF 0651 0671; do fc-match "<Your Font>:charset=$c" family; 
 the isolated presentation forms, which fall through to Thabit
 automatically. Noto Sans Arabic is only needed for the alef wasla
 presentation forms U+FB50/U+FB51, which Thabit also lacks.)
+
+### Arabic appears reversed (Alacritty, kitty, WezTerm, …)
+
+Some terminals (Alacritty, kitty, WezTerm, Ghostty, Windows Terminal) draw
+text strictly left to right and do not implement BiDi, so the Arabic comes
+out backwards with unjoined letters. `--arabic` controls the fix:
+
+- `auto` *(default)* — pre-shapes the Arabic line (joined presentation forms
+  in visual order) only when stdout is a TTY **and** the terminal is known to
+  lack BiDi. Piped output, VTE-based terminals (GNOME Terminal, Tilix),
+  Konsole, Terminal.app and unidentified terminals are never touched.
+- `shaped` — always pre-shape, even when piped.
+- `native` — never shape; print plain logical-order text.
+
+`shaped` looks reversed in terminals that do their own BiDi (VTE, Konsole),
+so use it only where the terminal has none. Make it permanent with
+`export TASMIYAH_ARABIC=shaped` or `arabic = "shaped"` in the config file.
+If detection guesses wrong (for example a nested terminal inherits another
+terminal's variables), force it with `--arabic native` or `--arabic shaped`;
+`tasmiyah doctor` shows what was detected. tmux or screen started inside
+kitty inherits `KITTY_WINDOW_ID` and keeps shaping (correct, since kitty
+draws the cells); a session started in kitty and re-attached from a VTE
+terminal will still shape, so use `--arabic native` or
+`TASMIYAH_ARABIC=native` there.
 
 ### The Arabic looks shifted by a column or two
 

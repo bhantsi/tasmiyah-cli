@@ -4,6 +4,8 @@
 //! paths are injected by the caller. `query_fontconfig` and `run` touch the
 //! real environment (spawning `fc-match`, reading env vars, printing).
 
+use crate::cli::ArabicMode;
+use crate::shaping::resolve_arabic;
 use crate::terminal::{self, Bidi};
 use crate::theme::Theme;
 use crossterm::style::Stylize;
@@ -63,17 +65,24 @@ pub fn check_locale(env: &dyn Fn(&str) -> Option<String>) -> Check {
     }
 }
 
-pub fn check_terminal(bidi: Bidi) -> Check {
+/// `shapes` is whether the effective `--arabic` mode would pre-shape the
+/// Arabic line on a TTY in this terminal.
+pub fn check_terminal(bidi: Bidi, shapes: bool) -> Check {
     match bidi {
         Bidi::Native(n) => check(
             Status::Ok,
             "Terminal",
             format!("{n} renders Arabic right-to-left"),
         ),
+        Bidi::Missing(n) if shapes => check(
+            Status::Ok,
+            "Terminal",
+            format!("{n} has no BiDi; using shaped Arabic (override with --arabic native)"),
+        ),
         Bidi::Missing(n) => check(
             Status::Warn,
             "Terminal",
-            format!("{n} has no BiDi; Arabic may appear reversed"),
+            format!("{n} has no BiDi; Arabic may appear reversed; try --arabic shaped"),
         ),
         Bidi::Unknown => check(Status::Info, "Terminal", "could not identify the terminal"),
     }
@@ -203,15 +212,22 @@ pub fn query_fontconfig(_family: &str, _chars: &[char]) -> Option<Vec<(char, Str
 }
 
 /// Run every check against the real environment and print the results.
-pub fn run<W: Write>(font_family: Option<&str>, theme: &Theme, out: &mut W) -> io::Result<()> {
+pub fn run<W: Write>(
+    font_family: Option<&str>,
+    arabic_mode: ArabicMode,
+    theme: &Theme,
+    out: &mut W,
+) -> io::Result<()> {
     let env = |k: &str| std::env::var(k).ok();
     let explicit = font_family.is_some();
     let family = font_family.unwrap_or("monospace");
     let served = query_fontconfig(family, &crate::phrases::arabic_codepoints());
     let home = dirs::home_dir();
+    let bidi = terminal::detect(&env);
+    let shapes = resolve_arabic(arabic_mode, true, bidi);
     let checks = [
         check_locale(&env),
-        check_terminal(terminal::detect(&env)),
+        check_terminal(bidi, shapes),
         check_fonts(family, explicit, served.as_deref()),
         match std::env::current_exe() {
             Ok(exe) => check_install_path(&exe, home.as_deref()),
@@ -281,13 +297,30 @@ mod tests {
 
     #[test]
     fn terminal_native_ok_and_missing_warns() {
-        let ok = check_terminal(Bidi::Native("kitty"));
+        let ok = check_terminal(Bidi::Native("kitty"), false);
         assert_eq!(ok.status, Status::Ok);
         assert_eq!(ok.detail, "kitty renders Arabic right-to-left");
-        let w = check_terminal(Bidi::Missing("xterm"));
-        assert_eq!(w.status, Status::Warn);
-        assert_eq!(w.detail, "xterm has no BiDi; Arabic may appear reversed");
-        assert_eq!(check_terminal(Bidi::Unknown).status, Status::Info);
+        assert_eq!(check_terminal(Bidi::Unknown, false).status, Status::Info);
+    }
+
+    #[test]
+    fn terminal_missing_and_shaped_is_ok() {
+        let c = check_terminal(Bidi::Missing("xterm"), true);
+        assert_eq!(c.status, Status::Ok);
+        assert_eq!(
+            c.detail,
+            "xterm has no BiDi; using shaped Arabic (override with --arabic native)"
+        );
+    }
+
+    #[test]
+    fn terminal_missing_and_not_shaped_warns() {
+        let c = check_terminal(Bidi::Missing("xterm"), false);
+        assert_eq!(c.status, Status::Warn);
+        assert_eq!(
+            c.detail,
+            "xterm has no BiDi; Arabic may appear reversed; try --arabic shaped"
+        );
     }
 
     #[test]

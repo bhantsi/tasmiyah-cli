@@ -29,6 +29,7 @@ time you open your terminal.
 - 🎨 **Three layouts** — centered ASCII logo (default), classic unicode box, or minimal text.
 - 🌍 **Twelve phrases** — Basmala, Alhamdulillah, SubhanAllah, Allahu Akbar, and more, several with matching ASCII logos.
 - 🌈 **Themes** — gold, ocean, rose, or mono palettes, plus per-element custom colors.
+- 🔤 **Arabic that just works** — pre-shapes the Arabic for terminals without BiDi (Alacritty, kitty, WezTerm, …); control it with `--arabic auto|native|shaped`.
 - ⚙️ **Config file** — set your style, theme, and colors once in `~/.config/tasmiyah/config.toml`.
 - 🧩 **Cross-platform** — Linux, macOS (Apple Silicon + Intel), and Windows.
 - 🚦 **Script-safe** — auto-detects pipes and disables colors; honors `NO_COLOR` and `TERM=dumb`.

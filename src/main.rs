@@ -4,12 +4,12 @@
 //! style / theme / font (CLI flag > env var > config > default),
 //! pick a phrase, render the banner.
 
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 
 use clap::Parser;
-use tasmiyah_cli::{banner, config, font, phrases, theme, update};
+use tasmiyah_cli::{banner, config, font, phrases, shaping, terminal, theme, update};
 
-use tasmiyah_cli::cli::{Args, Command, FontArg, StyleKind};
+use tasmiyah_cli::cli::{ArabicMode, Args, Command, FontArg, StyleKind};
 use tasmiyah_cli::phrases::{LookupError, Phrase};
 use tasmiyah_cli::theme::ThemePreset;
 
@@ -52,10 +52,14 @@ fn main() -> io::Result<()> {
 
     let theme = theme::Theme::for_args(&args, preset, cfg.colors.as_ref());
 
+    // Resolve the effective Arabic mode: CLI > TASMIYAH_ARABIC > config > auto.
+    let arabic_mode = resolve_arabic_mode(&args, &cfg);
+
     // `doctor` prints diagnostics only: no banner, no update notice.
     if let Some(Command::Doctor { font_family }) = &args.command {
         return match tasmiyah_cli::doctor::run(
             font_family.as_deref(),
+            arabic_mode,
             &theme,
             &mut io::stdout().lock(),
         ) {
@@ -72,6 +76,18 @@ fn main() -> io::Result<()> {
         }
     };
     let color = theme.enabled;
+    let bidi = terminal::detect(&|k| std::env::var(k).ok());
+    let shaped_phrase;
+    let phrase = if shaping::resolve_arabic(arabic_mode, io::stdout().is_terminal(), bidi) {
+        // Leaked once so the shaped line is `'static` like the table's
+        // text; avoids changing every renderer's `&Phrase` signature.
+        let arabic: &'static str =
+            Box::leak(shaping::shape_for_ltr_terminal(phrase.arabic).into_boxed_str());
+        shaped_phrase = Phrase { arabic, ..*phrase };
+        &shaped_phrase
+    } else {
+        phrase
+    };
     banner::render(&args, &theme, font, phrase_index, phrase)?;
     // Non-fatal, daily-cached check for a newer release on crates.io.
     // All gating (TTY, opt-out env vars, error swallowing) lives in
@@ -168,6 +184,34 @@ fn resolve_theme(args: &Args, cfg: &config::Config) -> ThemePreset {
     ThemePreset::Gold
 }
 
+/// CLI flag > `TASMIYAH_ARABIC` > config `arabic` > `auto`.
+fn resolve_arabic_mode(args: &Args, cfg: &config::Config) -> ArabicMode {
+    if let Some(m) = args.arabic {
+        return m;
+    }
+    if let Some(m) = std::env::var("TASMIYAH_ARABIC")
+        .ok()
+        .as_deref()
+        .and_then(parse_arabic)
+    {
+        return m;
+    }
+    if let Some(m) = cfg.arabic.as_deref().and_then(parse_arabic) {
+        return m;
+    }
+    ArabicMode::Auto
+}
+
+/// Lenient parser shared by `TASMIYAH_ARABIC` and the config file.
+fn parse_arabic(raw: &str) -> Option<ArabicMode> {
+    match raw.trim().to_lowercase().as_str() {
+        "auto" => Some(ArabicMode::Auto),
+        "native" => Some(ArabicMode::Native),
+        "shaped" => Some(ArabicMode::Shaped),
+        _ => None,
+    }
+}
+
 /// Lenient parser shared by `TASMIYAH_STYLE` and the config file.
 fn parse_style(raw: &str) -> Option<StyleKind> {
     match raw.trim().to_lowercase().as_str() {
@@ -198,6 +242,14 @@ mod tests {
         assert_eq!(parse_style(" Centered "), Some(StyleKind::Centered));
         assert_eq!(parse_style("MINIMAL"), Some(StyleKind::Minimal));
         assert_eq!(parse_style("fancy"), None);
+    }
+
+    #[test]
+    fn parse_arabic_accepts_known_values() {
+        assert_eq!(parse_arabic("shaped"), Some(ArabicMode::Shaped));
+        assert_eq!(parse_arabic(" Native "), Some(ArabicMode::Native));
+        assert_eq!(parse_arabic("AUTO"), Some(ArabicMode::Auto));
+        assert_eq!(parse_arabic("sideways"), None);
     }
 
     #[test]
