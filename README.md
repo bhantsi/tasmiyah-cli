@@ -105,7 +105,8 @@ Add one line to your shell rc to greet you on every new session:
 
 ```bash
 # ~/.bashrc, ~/.zshrc, etc.
-command -v tasmiyah >/dev/null 2>&1 && tasmiyah
+if [ -x "$HOME/.cargo/bin/tasmiyah" ]; then "$HOME/.cargo/bin/tasmiyah"
+elif command -v tasmiyah >/dev/null 2>&1; then tasmiyah; fi
 ```
 
 📖 **Full documentation:** see the [**User Guide**](docs/USER_GUIDE.md) for
