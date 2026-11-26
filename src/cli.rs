@@ -22,6 +22,21 @@ pub struct Args {
     #[arg(short = 'r', long)]
     pub random: bool,
 
+    /// Show a specific phrase by index (see `--list`) or name, e.g.
+    /// `--phrase 3` or `--phrase alhamdulillah`. Falls back to
+    /// `TASMIYAH_PHRASE`, then the config file, then the Basmala.
+    #[arg(
+        short = 'p',
+        long,
+        value_name = "INDEX|NAME",
+        conflicts_with = "random"
+    )]
+    pub phrase: Option<String>,
+
+    /// List every phrase with its index and name, then exit.
+    #[arg(short = 'l', long)]
+    pub list: bool,
+
     /// Visual style. Default is a large BISMILLAH logo centered in the
     /// terminal; `classic` is the v0.1 unicode box; `minimal` strips
     /// all decoration for shell prompts and scripting. Falls back to

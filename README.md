@@ -83,6 +83,8 @@ Archives are published for:
 tasmiyah                              # default: Bismillah banner
 tasmiyah --translation                # add transliteration + English
 tasmiyah --random                     # random phrase from the library
+tasmiyah --list                       # list every phrase with its index and name
+tasmiyah --phrase alhamdulillah       # pick a phrase by name (or index: -p 1)
 tasmiyah --style classic              # the v0.1 unicode-box layout
 tasmiyah --style minimal              # plain text — ideal for shell prompts
 tasmiyah --theme ocean                # try a different palette
@@ -95,6 +97,7 @@ Make it yours with `~/.config/tasmiyah/config.toml`:
 ```toml
 style = "centered"
 theme = "ocean"
+phrase = "alhamdulillah"
 translation = true
 
 [colors]

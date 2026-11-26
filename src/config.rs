@@ -12,6 +12,7 @@
 //! style = "classic"          # classic | centered | minimal
 //! font = "nerd"              # standard | nerd | auto
 //! theme = "ocean"            # gold | ocean | rose | mono
+//! phrase = "alhamdulillah"   # index (0-11) or name; see `tasmiyah --list`
 //! translation = true
 //!
 //! [colors]                   # per-element overrides, #RRGGBB or names
@@ -21,7 +22,7 @@
 //!
 //! Precedence (handled by the binary entry point):
 //! CLI flag > env var (`TASMIYAH_STYLE`, `TASMIYAH_FONT`,
-//! `TASMIYAH_THEME`) > config file > built-in default.
+//! `TASMIYAH_THEME`, `TASMIYAH_PHRASE`) > config file > built-in default.
 
 use std::io::IsTerminal;
 use std::path::PathBuf;
@@ -36,6 +37,7 @@ pub struct Config {
     pub style: Option<String>,
     pub font: Option<String>,
     pub theme: Option<String>,
+    pub phrase: Option<String>,
     pub translation: Option<bool>,
     pub colors: Option<ColorOverrides>,
 }

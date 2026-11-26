@@ -26,7 +26,8 @@ fn run_with_env(args: &[&str], env: &[(&str, &str)]) -> (String, String, i32) {
         .env("NO_UPDATE_NOTIFIER", "1")
         // Isolate from ambient developer env; callers' overrides apply below.
         .env_remove("TASMIYAH_ROWS")
-        .env_remove("TASMIYAH_COLS");
+        .env_remove("TASMIYAH_COLS")
+        .env_remove("TASMIYAH_PHRASE");
     for (k, v) in env {
         cmd.env(k, v);
     }
@@ -306,7 +307,8 @@ fn config_file_is_used_when_no_flag_or_env() {
         .env("NO_UPDATE_NOTIFIER", "1")
         .env("XDG_CONFIG_HOME", &dir)
         // Make sure the env var doesn't mask the config.
-        .env_remove("TASMIYAH_STYLE");
+        .env_remove("TASMIYAH_STYLE")
+        .env_remove("TASMIYAH_PHRASE");
     let out = cmd.output().expect("failed to execute tasmiyah binary");
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
     let _ = std::fs::remove_dir_all(&dir);
@@ -327,7 +329,8 @@ fn malformed_config_does_not_crash() {
     cmd.env("NO_COLOR", "1")
         .env("NO_UPDATE_NOTIFIER", "1")
         .env("XDG_CONFIG_HOME", &dir)
-        .env_remove("TASMIYAH_STYLE");
+        .env_remove("TASMIYAH_STYLE")
+        .env_remove("TASMIYAH_PHRASE");
     let out = cmd.output().expect("failed to execute tasmiyah binary");
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
     let _ = std::fs::remove_dir_all(&dir);
@@ -371,4 +374,94 @@ fn rows_env_var_centers_with_translation() {
         &[("TASMIYAH_ROWS", "40"), ("TASMIYAH_COLS", "120")],
     );
     assert_eq!(leading_blank_lines(&stdout), 15);
+}
+
+#[test]
+fn list_prints_every_phrase() {
+    let (out, _e, code) = run(&["--list"]);
+    assert_eq!(code, 0);
+    assert_eq!(out.lines().count(), 12);
+    assert!(out.lines().next().unwrap().contains("bismillah"));
+    assert!(out.contains("salawat"));
+}
+
+#[test]
+fn phrase_by_name_selects_it() {
+    let (out, _e, code) = run(&["--style", "minimal", "--phrase", "alhamdulillah"]);
+    assert_eq!(code, 0);
+    assert!(out.contains("ٱلْحَمْدُ"));
+}
+
+#[test]
+fn phrase_by_index_selects_it() {
+    let (out, _e, _c) = run(&["--style", "minimal", "-p", "6"]);
+    assert!(out.contains("أَسْتَغْفِرُ"));
+}
+
+#[test]
+fn phrase_out_of_range_errors() {
+    let (out, err, code) = run(&["--phrase", "99"]);
+    assert_eq!(code, 2);
+    assert!(out.is_empty());
+    assert!(err.contains("--list"));
+}
+
+#[test]
+fn unknown_phrase_errors() {
+    let (_o, err, code) = run(&["--phrase", "banana"]);
+    assert_eq!(code, 2);
+    assert!(err.contains("unknown phrase 'banana'"));
+}
+
+#[test]
+fn phrase_conflicts_with_random() {
+    let (_o, _e, code) = run(&["--phrase", "0", "--random"]);
+    assert_eq!(code, 2);
+}
+
+#[test]
+fn phrase_env_selects_it() {
+    let (out, _e, _c) = run_with_env(&["--style", "minimal"], &[("TASMIYAH_PHRASE", "inshallah")]);
+    assert!(out.contains("إِنْ شَاءَ"));
+}
+
+#[test]
+fn invalid_phrase_env_falls_back_to_default() {
+    let (out, err, code) = run_with_env(&["--style", "minimal"], &[("TASMIYAH_PHRASE", "nope")]);
+    assert_eq!(code, 0);
+    assert!(out.contains("بِسْمِ"));
+    assert!(err.is_empty());
+}
+
+fn run_with_phrase_config(name: &str, args: &[&str]) -> String {
+    let dir = std::env::temp_dir().join(format!("tasmiyah-{name}-{}", std::process::id()));
+    let cfg_dir = dir.join("tasmiyah");
+    std::fs::create_dir_all(&cfg_dir).unwrap();
+    std::fs::write(cfg_dir.join("config.toml"), "phrase = \"salawat\"\n").unwrap();
+
+    let mut cmd = bin();
+    cmd.args(args)
+        .env("NO_COLOR", "1")
+        .env("NO_UPDATE_NOTIFIER", "1")
+        .env("XDG_CONFIG_HOME", &dir)
+        .env_remove("TASMIYAH_STYLE")
+        .env_remove("TASMIYAH_PHRASE");
+    let out = cmd.output().expect("failed to execute tasmiyah binary");
+    let _ = std::fs::remove_dir_all(&dir);
+    String::from_utf8_lossy(&out.stdout).into_owned()
+}
+
+#[test]
+fn config_phrase_is_used() {
+    let out = run_with_phrase_config("phrase-cfg", &["--style", "minimal"]);
+    assert!(out.contains("ٱللَّٰهُمَّ"), "config phrase ignored:\n{out}");
+}
+
+#[test]
+fn random_flag_beats_config_phrase() {
+    let any_other = (0..20).any(|_| {
+        !run_with_phrase_config("phrase-rand", &["--random", "--style", "minimal"])
+            .contains("ٱللَّٰهُمَّ")
+    });
+    assert!(any_other, "--random never overrode the config phrase");
 }

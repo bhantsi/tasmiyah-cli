@@ -258,6 +258,8 @@ mod tests {
             no_color: true,
             translation: false,
             random: false,
+            phrase: None,
+            list: false,
             style: Some(crate::cli::StyleKind::Centered),
             font: Some(crate::cli::FontArg::Auto),
             theme: None,

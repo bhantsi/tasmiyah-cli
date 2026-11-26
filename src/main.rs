@@ -4,15 +4,24 @@
 //! style / theme / font (CLI flag > env var > config > default),
 //! pick a phrase, render the banner.
 
+use std::io::{self, Write};
+
 use clap::Parser;
 use tasmiyah_cli::{banner, config, font, phrases, theme, update};
 
 use tasmiyah_cli::cli::{Args, FontArg, StyleKind};
+use tasmiyah_cli::phrases::{LookupError, Phrase};
 use tasmiyah_cli::theme::ThemePreset;
 
-fn main() -> std::io::Result<()> {
+fn main() -> io::Result<()> {
     let cfg = config::Config::load();
     let mut args = Args::parse();
+
+    // `--list` prints the phrase table and exits before any rendering
+    // or update check.
+    if args.list {
+        return print_list(&mut io::stdout().lock());
+    }
 
     // Resolve the effective style: CLI > TASMIYAH_STYLE > config > centered.
     let style = resolve_style(&args, &cfg);
@@ -34,10 +43,12 @@ fn main() -> std::io::Result<()> {
     }
 
     let theme = theme::Theme::for_args(&args, preset, cfg.colors.as_ref());
-    let (phrase_index, phrase) = if args.random {
-        phrases::random_with_index()
-    } else {
-        phrases::default_with_index()
+    let (phrase_index, phrase) = match resolve_phrase(&args, &cfg) {
+        Ok(found) => found,
+        Err(e) => {
+            eprintln!("tasmiyah: {e}");
+            std::process::exit(2);
+        }
     };
     let color = theme.enabled;
     banner::render(&args, &theme, font, phrase_index, phrase)?;
@@ -45,6 +56,47 @@ fn main() -> std::io::Result<()> {
     // All gating (TTY, opt-out env vars, error swallowing) lives in
     // `update::notify` so `main` stays a straight pipeline.
     update::notify(color);
+    Ok(())
+}
+
+/// `--phrase` > `--random` > `TASMIYAH_PHRASE` > config `phrase` > index 0.
+///
+/// Only an invalid `--phrase` is an error; bad env/config values are
+/// ignored so a stale setting never breaks the greeting.
+fn resolve_phrase(
+    args: &Args,
+    cfg: &config::Config,
+) -> Result<(usize, &'static Phrase), LookupError> {
+    if let Some(sel) = args.phrase.as_deref() {
+        let i = phrases::find(sel)?;
+        return Ok((i, &phrases::PHRASES[i]));
+    }
+    if args.random {
+        return Ok(phrases::random_with_index());
+    }
+    if let Some(i) = std::env::var("TASMIYAH_PHRASE")
+        .ok()
+        .and_then(|s| phrases::find(&s).ok())
+    {
+        return Ok((i, &phrases::PHRASES[i]));
+    }
+    if let Some(i) = cfg.phrase.as_deref().and_then(|s| phrases::find(s).ok()) {
+        return Ok((i, &phrases::PHRASES[i]));
+    }
+    Ok(phrases::default_with_index())
+}
+
+/// Write one line per phrase: index, name, transliteration, English.
+fn print_list<W: Write>(out: &mut W) -> io::Result<()> {
+    for (i, p) in phrases::PHRASES.iter().enumerate() {
+        writeln!(
+            out,
+            "{i:>2}  {slug:<15} {translit} — {english}",
+            slug = p.slug,
+            translit = p.translit,
+            english = p.english
+        )?;
+    }
     Ok(())
 }
 

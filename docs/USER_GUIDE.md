@@ -144,6 +144,8 @@ both a short (`-x`) and a long (`--xxx`) form.
 | `--no-color` | `-n` | Disable ANSI colors. Useful when piping or for plain-text logs. |
 | `--translation` | `-t` | Show the Latin transliteration **and** the English meaning under the Arabic. |
 | `--random` | `-r` | Pick a random phrase from the [library](#-phrase-library) instead of the Basmala. |
+| `--phrase <INDEX\|NAME>` | `-p` | Show a specific phrase by index (`0`–`11`) or name (e.g. `alhamdulillah`). Conflicts with `--random`. See [Phrase Library](#-phrase-library). |
+| `--list` | `-l` | List every phrase with its index and name, then exit. |
 | `--style <STYLE>` | `-s` | Layout: `centered` *(default)*, `classic`, or `minimal`. See [Styles](#styles). |
 | `--font <FONT>` | `-f` | Arabic-width layout hint: `auto` *(default)*, `standard`, or `nerd`. See [Environment Variables](#-environment-variables). |
 | `--theme <THEME>` | — | Color palette: `gold` *(default)*, `ocean`, `rose`, or `mono`. See [Themes](#themes). |
@@ -154,6 +156,10 @@ Flags compose freely. The two most common combinations:
 
 - `tasmiyah -t` → default Basmala **with** translation
 - `tasmiyah -rt` → random phrase **with** translation
+- `tasmiyah -p subhanallah -t` → a specific phrase **with** translation
+
+An invalid `--phrase` value prints an error on stderr and exits with
+status 2; run `tasmiyah --list` to see valid indices and names.
 
 ### Styles
 
@@ -357,6 +363,7 @@ tasmiyah --random --translation
 |----------|--------|
 | `NO_COLOR` | If set to **any** value (even empty), disables ANSI colors. Standardized at <https://no-color.org>. |
 | `TASMIYAH_STYLE` | Default style (`classic` / `centered` / `minimal`). Lower precedence than `--style`, higher than the config file. |
+| `TASMIYAH_PHRASE` | Default phrase (index `0`–`11` or name; see `tasmiyah --list`). Lower precedence than `--phrase` and `--random`, higher than the config file. Invalid values are ignored. |
 | `TASMIYAH_THEME` | Default theme (`gold` / `ocean` / `rose` / `mono`). Lower precedence than `--theme`, higher than the config file. |
 | `TASMIYAH_FONT` | Override font detection. Set to `nerd` (or `nerd-font`) to force Nerd-Font layout, or `standard` to force the plain layout. Lower precedence than `--font`. |
 | `TASMIYAH_COLS` / `TASMIYAH_ROWS` | Override the detected terminal size (columns/rows). Mainly useful for tests, screenshots, and demos. |
@@ -391,6 +398,7 @@ interactive sessions).
 style = "classic"          # classic | centered | minimal
 font = "nerd"              # standard | nerd | auto
 theme = "ocean"            # gold | ocean | rose | mono
+phrase = "alhamdulillah"   # index (0-11) or name; see `tasmiyah --list`
 translation = true         # always show transliteration + English
 
 [colors]                   # per-element overrides, #RRGGBB or a name
@@ -408,27 +416,31 @@ built-in default.
 ## 📚 Phrase Library
 
 When you pass `--random`, `tasmiyah` picks uniformly from this curated
-set:
+set. Select one explicitly with `--phrase <INDEX|NAME>` (or
+`TASMIYAH_PHRASE` / the config file's `phrase`); `tasmiyah --list` prints
+this table's index and name columns. Names are case-insensitive and
+ignore spaces and punctuation, and a unique prefix is enough (for
+example `allahu` or `hasb`).
 
-| # | Arabic | Transliteration | English |
-|---|--------|-----------------|---------|
-| 1 | بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ | Bismillāh ir-Raḥmān ir-Raḥīm | In the name of Allah, the Most Gracious, the Most Merciful |
-| 2 | ٱلْحَمْدُ لِلَّٰهِ | Alḥamdulillāh | All praise is due to Allah |
-| 3 | سُبْحَانَ ٱللَّٰهِ | Subḥān Allāh | Glory be to Allah |
-| 4 | ٱللَّٰهُ أَكْبَرُ | Allāhu Akbar | Allah is the Greatest |
-| 5 | مَا شَاءَ ٱللَّٰهُ | Mā shāʾ Allāh | What Allah has willed |
-| 6 | إِنْ شَاءَ ٱللَّٰهُ | In shāʾ Allāh | If Allah wills |
-| 7 | أَسْتَغْفِرُ ٱللَّٰهَ | Astaghfirullāh | I seek forgiveness from Allah |
-| 8 | لَا إِلَٰهَ إِلَّا ٱللَّٰهُ | Lā ilāha illā Allāh | There is no god but Allah |
-| 9 | حَسْبُنَا ٱللَّٰهُ وَنِعْمَ ٱلْوَكِيلُ | Ḥasbunā Allāhu wa niʿmal wakīl | Allah is sufficient for us, and He is the best Disposer of affairs |
-| 10 | لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِٱللَّٰهِ | Lā ḥawla wa lā quwwata illā billāh | There is no might nor power except with Allah |
-| 11 | رَبَّنَا آتِنَا فِي ٱلدُّنْيَا حَسَنَةً | Rabbanā ātinā fi d-dunyā ḥasanah | Our Lord, give us in this world that which is good |
-| 12 | ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ | Allāhumma ṣalli ʿalā Muḥammad | O Allah, send blessings upon Muhammad |
+| # | Name | Arabic | Transliteration | English |
+|---|------|--------|-----------------|---------|
+| 0 | `bismillah` | بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ | Bismillāh ir-Raḥmān ir-Raḥīm | In the name of Allah, the Most Gracious, the Most Merciful |
+| 1 | `alhamdulillah` | ٱلْحَمْدُ لِلَّٰهِ | Alḥamdulillāh | All praise is due to Allah |
+| 2 | `subhanallah` | سُبْحَانَ ٱللَّٰهِ | Subḥān Allāh | Glory be to Allah |
+| 3 | `allahuakbar` | ٱللَّٰهُ أَكْبَرُ | Allāhu Akbar | Allah is the Greatest |
+| 4 | `mashallah` | مَا شَاءَ ٱللَّٰهُ | Mā shāʾ Allāh | What Allah has willed |
+| 5 | `inshallah` | إِنْ شَاءَ ٱللَّٰهُ | In shāʾ Allāh | If Allah wills |
+| 6 | `astaghfirullah` | أَسْتَغْفِرُ ٱللَّٰهَ | Astaghfirullāh | I seek forgiveness from Allah |
+| 7 | `tahlil` | لَا إِلَٰهَ إِلَّا ٱللَّٰهُ | Lā ilāha illā Allāh | There is no god but Allah |
+| 8 | `hasbunallah` | حَسْبُنَا ٱللَّٰهُ وَنِعْمَ ٱلْوَكِيلُ | Ḥasbunā Allāhu wa niʿmal wakīl | Allah is sufficient for us, and He is the best Disposer of affairs |
+| 9 | `hawqala` | لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِٱللَّٰهِ | Lā ḥawla wa lā quwwata illā billāh | There is no might nor power except with Allah |
+| 10 | `rabbana` | رَبَّنَا آتِنَا فِي ٱلدُّنْيَا حَسَنَةً | Rabbanā ātinā fi d-dunyā ḥasanah | Our Lord, give us in this world that which is good |
+| 11 | `salawat` | ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ | Allāhumma ṣalli ʿalā Muḥammad | O Allah, send blessings upon Muhammad |
 
-Index 1 (the Basmala) is the default when no flags are passed.
+Index 0 (the Basmala) is the default when no flags are passed.
 
-In the `centered` style, phrases 1–8 have a dedicated ASCII logo; the
-newer phrases (9–12) render as centered text only.
+In the `centered` style, phrases 0–7 have a dedicated ASCII logo; the
+newer phrases (8–11) render as centered text only.
 
 ---
 
